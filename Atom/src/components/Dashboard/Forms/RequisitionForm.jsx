@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { toast } from 'react-toastify';
+import ErrorToast from '../messages/ErrorToast';
+import SuccessToast from '../messages/SuccessToast';
 
 const RequisitionForm = ({
   isEdit = false,
@@ -40,11 +41,47 @@ const RequisitionForm = ({
     site: [],
   });
 
+  const [alertMessage, setAlertMessage] = useState({
+    show: false,
+    type: '', // 'success' or 'error'
+    message: '',
+    description: ''
+  });
+
+  // Helper functions for showing alert messages
+  const showSuccessMessage = (message, description = '', autoHide = true) => {
+    setAlertMessage({
+      show: true,
+      type: 'success',
+      message,
+      description
+    });
+    // Auto-hide after 3 seconds only if autoHide is true
+    if (autoHide) {
+      setTimeout(() => {
+        setAlertMessage(prev => ({ ...prev, show: false }));
+      }, 3000);
+    }
+  };
+
+  const showErrorMessage = (message, description = '') => {
+    setAlertMessage({
+      show: true,
+      type: 'error',
+      message,
+      description
+    });
+    // Auto-hide after 5 seconds for errors
+    setTimeout(() => {
+      setAlertMessage(prev => ({ ...prev, show: false }));
+    }, 5000);
+  };
+
   // Centralized Axios instance with Bearer token
   const createAxiosInstance = () => {
     const token = localStorage.getItem('access_token');
     if (!token) {
-      toast.error('Please log in to continue.');
+      showErrorMessage('Please log in to continue.');
       window.location.href = '/login';
       return null;
     }
@@ -146,7 +183,7 @@ const RequisitionForm = ({
       if (retryCount > 0 && error.code === 'ERR_NETWORK') {
         setTimeout(() => fetchOptions(field, retryCount - 1), 2000);
       } else {
-        toast.error(`Failed to fetch ${field.replace(/([A-Z])/g, ' $1').toLowerCase().trim()}. Check console for details.`);
+        showErrorMessage(`Failed to fetch ${field.replace(/([A-Z])/g, ' $1').toLowerCase().trim()}. Check console for details.`);
       }
     }
   };
@@ -174,7 +211,7 @@ const RequisitionForm = ({
     const isValid = requiredFields.every((field) => requisition[field]?.trim());
 
     if (!isValid) {
-      toast.error('Please fill in all required fields (*).');
+      showErrorMessage('Please fill in all required fields (*).');
       return;
     }
 
@@ -188,19 +225,19 @@ const RequisitionForm = ({
       const selectedAmc = existingOptions.amcId.find((amc) => amc.value === requisition.amcId);
 
       if (!selectedItem) {
-        toast.error('Selected item is invalid. Please select an existing item.');
+        showErrorMessage('Selected item is invalid. Please select an existing item.');
         return;
       }
       if (!selectedEmployee) {
-        toast.error('Selected employee is invalid. Please select an existing employee.');
+        showErrorMessage('Selected employee is invalid. Please select an existing employee.');
         return;
       }
       if (!selectedSite) {
-        toast.error('Selected site is invalid. Please select an existing site.');
+        showErrorMessage('Selected site is invalid. Please select an existing site.');
         return;
       }
       if (selectedAmc && !selectedAmc.amcname) {
-        toast.error('Selected AMC has no valid name. Please select a valid AMC or update backend data.');
+        showErrorMessage('Selected AMC has no valid name. Please select a valid AMC or update backend data.');
         return;
       }
 
@@ -256,12 +293,33 @@ const RequisitionForm = ({
           })
           .join('; ') ||
         `Failed to ${isEdit ? 'update' : 'create'} requisition.`;
-      toast.error(errorMsg);
+      showErrorMessage(errorMsg);
     }
   };
 
   return (
-    <div className="fixed inset-0  bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      {/* Fixed positioned messages in right bottom corner */}
+      {alertMessage.show && (
+        <div className="fixed bottom-4 right-4 z-[60] max-w-sm animate-in slide-in-from-right-2 duration-300">
+          {alertMessage.type === 'success' ? (
+            <SuccessToast 
+              message={alertMessage.message} 
+              description={alertMessage.description}
+              autoClose={3000}
+              onClose={() => setAlertMessage(prev => ({ ...prev, show: false }))}
+            />
+          ) : (
+            <ErrorToast 
+              message={alertMessage.message} 
+              description={alertMessage.description}
+              autoClose={5000}
+              onClose={() => setAlertMessage(prev => ({ ...prev, show: false }))}
+            />
+          )}
+        </div>
+      )}
+      
       {/* Main Form Modal */}
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden">
         {/* Modal Header */}

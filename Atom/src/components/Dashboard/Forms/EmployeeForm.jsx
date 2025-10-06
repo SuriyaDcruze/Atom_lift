@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate, useParams } from 'react-router-dom';
+import ErrorToast from '../messages/ErrorToast';
+import SuccessToast from '../messages/SuccessToast';
 
 const apiBaseUrl = import.meta.env.VITE_BASE_API;
 
@@ -14,9 +16,43 @@ const EmployeeForm = ({ isEdit, initialData, onClose, onSubmitSuccess, onSubmitE
     password_confirm: '',
     name: '',
   });
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const [alertMessage, setAlertMessage] = useState({
+    show: false,
+    type: '', // 'success' or 'error'
+    message: '',
+    description: ''
+  });
+
+  // Helper functions for showing alert messages
+  const showSuccessMessage = (message, description = '', autoHide = true) => {
+    setAlertMessage({
+      show: true,
+      type: 'success',
+      message,
+      description
+    });
+    // Auto-hide after 3 seconds only if autoHide is true
+    if (autoHide) {
+      setTimeout(() => {
+        setAlertMessage(prev => ({ ...prev, show: false }));
+      }, 3000);
+    }
+  };
+
+  const showErrorMessage = (message, description = '') => {
+    setAlertMessage({
+      show: true,
+      type: 'error',
+      message,
+      description
+    });
+    // Auto-hide after 5 seconds for errors
+    setTimeout(() => {
+      setAlertMessage(prev => ({ ...prev, show: false }));
+    }, 5000);
+  };
 
   // Check token only on initial mount
   const token = localStorage.getItem('access_token');
@@ -61,10 +97,10 @@ const EmployeeForm = ({ isEdit, initialData, onClose, onSubmitSuccess, onSubmitE
           const errorMsg = err.response?.data?.error || err.message || 'Failed to fetch employee data';
           console.error('Fetch employee error at:', new Date().toISOString(), err.response || err);
           if (err.response?.status === 401) {
-            setError('Session expired or invalid token. Redirecting to login...');
+            showErrorMessage('Session expired or invalid token. Redirecting to login...');
             setTimeout(() => navigate('/login'), 2000);
           } else {
-            setError(errorMsg);
+            showErrorMessage(errorMsg);
           }
         }
       };
@@ -78,11 +114,11 @@ const EmployeeForm = ({ isEdit, initialData, onClose, onSubmitSuccess, onSubmitE
 
   const validateForm = () => {
     if (!isEdit && formData.password !== formData.password_confirm) {
-      setError('Passwords do not match');
+      showErrorMessage('Passwords do not match');
       return false;
     }
     if (!formData.username || !formData.email) {
-      setError('Username and email are required');
+      showErrorMessage('Username and email are required');
       return false;
     }
     return true;
@@ -90,8 +126,7 @@ const EmployeeForm = ({ isEdit, initialData, onClose, onSubmitSuccess, onSubmitE
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
-    setSuccess('');
+    // Clear any previous messages
     setIsSubmitting(true);
 
     if (!validateForm()) {
@@ -116,7 +151,7 @@ const EmployeeForm = ({ isEdit, initialData, onClose, onSubmitSuccess, onSubmitE
         },
       });
       console.log('Response:', response.data);
-      setSuccess(response.data.message || (isEdit ? 'Employee updated successfully' : 'Employee added successfully'));
+      showSuccessMessage(response.data.message || (isEdit ? 'Employee updated successfully' : 'Employee added successfully'));
       onSubmitSuccess(response.data.message || (isEdit ? 'Employee updated successfully' : 'Employee added successfully'));
       setTimeout(() => {
         onClose();
@@ -126,10 +161,10 @@ const EmployeeForm = ({ isEdit, initialData, onClose, onSubmitSuccess, onSubmitE
       const errorMsg = err.response?.data?.error || err.message || 'An error occurred';
       console.error('Submit error at:', new Date().toISOString(), err.response || err);
       if (err.response?.status === 401) {
-        setError('Session expired or invalid token. Redirecting to login...');
+        showErrorMessage('Session expired or invalid token. Redirecting to login...');
         setTimeout(() => navigate('/login'), 2000);
       } else {
-        setError(errorMsg);
+        showErrorMessage(errorMsg);
         onSubmitError(errorMsg);
       }
     } finally {
@@ -141,10 +176,29 @@ const EmployeeForm = ({ isEdit, initialData, onClose, onSubmitSuccess, onSubmitE
 
   return (
     <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
+      {/* Fixed positioned messages in right bottom corner */}
+      {alertMessage.show && (
+        <div className="fixed bottom-4 right-4 z-[60] max-w-sm animate-in slide-in-from-right-2 duration-300">
+          {alertMessage.type === 'success' ? (
+            <SuccessToast 
+              message={alertMessage.message} 
+              description={alertMessage.description}
+              autoClose={3000}
+              onClose={() => setAlertMessage(prev => ({ ...prev, show: false }))}
+            />
+          ) : (
+            <ErrorToast 
+              message={alertMessage.message} 
+              description={alertMessage.description}
+              autoClose={5000}
+              onClose={() => setAlertMessage(prev => ({ ...prev, show: false }))}
+            />
+          )}
+        </div>
+      )}
+      
       <div className="max-w-md mx-auto p-6 bg-white rounded-lg shadow-md">
         <h2 className="text-2xl font-bold mb-6">{isEdit ? 'Edit Employee' : 'Add Employee'}</h2>
-        {error && <p className="text-red-500 mb-4">{error}</p>}
-        {success && <p className="text-green-500 mb-4">{success}</p>}
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700">Username</label>

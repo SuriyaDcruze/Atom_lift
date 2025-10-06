@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import axios from 'axios';
+import ErrorToast from '../messages/ErrorToast';
+import SuccessToast from '../messages/SuccessToast';
 
 const RecurringInvoiceForm = ({ isOpen, onClose, onInvoiceAdded, isEdit = false, initialData = {} }) => {
   const [formData, setFormData] = useState({
@@ -22,13 +24,48 @@ const RecurringInvoiceForm = ({ isOpen, onClose, onInvoiceAdded, isEdit = false,
   const [customers, setCustomers] = useState([]);
   const [salesPersons, setSalesPersons] = useState([]);
   const [itemOptions, setItemOptions] = useState([]);
-  const [error, setError] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const [alertMessage, setAlertMessage] = useState({
+    show: false,
+    type: '', // 'success' or 'error'
+    message: '',
+    description: ''
+  });
+
+  // Helper functions for showing alert messages
+  const showSuccessMessage = (message, description = '', autoHide = true) => {
+    setAlertMessage({
+      show: true,
+      type: 'success',
+      message,
+      description
+    });
+    // Auto-hide after 3 seconds only if autoHide is true
+    if (autoHide) {
+      setTimeout(() => {
+        setAlertMessage(prev => ({ ...prev, show: false }));
+      }, 3000);
+    }
+  };
+
+  const showErrorMessage = (message, description = '') => {
+    setAlertMessage({
+      show: true,
+      type: 'error',
+      message,
+      description
+    });
+    // Auto-hide after 5 seconds for errors
+    setTimeout(() => {
+      setAlertMessage(prev => ({ ...prev, show: false }));
+    }, 5000);
+  };
 
   const createAxiosInstance = () => {
     const token = localStorage.getItem('access_token');
     if (!token) {
-      setError('Authentication token not found');
+      showErrorMessage('Authentication token not found');
       return null;
     }
     return axios.create({
@@ -47,11 +84,11 @@ const RecurringInvoiceForm = ({ isOpen, onClose, onInvoiceAdded, isEdit = false,
     } catch (error) {
       console.error(`Error fetching ${endpoint}:`, error);
       if (error.response?.status === 401) {
-        setError('Session expired. Please log in again.');
+        showErrorMessage('Session expired. Please log in again.');
       } else if (retryCount > 0 && error.code === 'ERR_NETWORK') {
         setTimeout(() => fetchData(endpoint, setter, retryCount - 1), 2000);
       } else {
-        setError(`Failed to fetch ${endpoint.replace(/[-]/g, ' ').trim()}.`);
+        showErrorMessage(`Failed to fetch ${endpoint.replace(/[-]/g, ' ').trim()}.`);
       }
     }
   };
@@ -93,7 +130,7 @@ const RecurringInvoiceForm = ({ isOpen, onClose, onInvoiceAdded, isEdit = false,
         })
         .catch(err => {
           console.error('Error loading invoice data:', err);
-          setError('Failed to load invoice data');
+          showErrorMessage('Failed to load invoice data');
         });
     }
   }, [isOpen, isEdit, initialData.id]);
@@ -142,11 +179,11 @@ const RecurringInvoiceForm = ({ isOpen, onClose, onInvoiceAdded, isEdit = false,
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError(null);
+    // Clear any previous messages
     setIsSubmitting(true);
 
     if (!formData.customer || !formData.start_date) {
-      setError('Customer and Start Date are required.');
+      showErrorMessage('Customer and Start Date are required.');
       setIsSubmitting(false);
       return;
     }
@@ -235,7 +272,7 @@ const RecurringInvoiceForm = ({ isOpen, onClose, onInvoiceAdded, isEdit = false,
       setItems([{ item: '', rate: '', qty: 1, tax: 0.00 }]);
     } catch (err) {
       console.error('Submission error:', err.response ? err.response.data : err.message);
-      setError(err.response?.data?.detail || JSON.stringify(err.response?.data) || err.message || 'Failed to submit');
+      showErrorMessage(err.response?.data?.detail || JSON.stringify(err.response?.data) || err.message || 'Failed to submit');
     } finally {
       setIsSubmitting(false);
     }
@@ -244,7 +281,28 @@ const RecurringInvoiceForm = ({ isOpen, onClose, onInvoiceAdded, isEdit = false,
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-opacity-50 flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      {/* Fixed positioned messages in right bottom corner */}
+      {alertMessage.show && (
+        <div className="fixed bottom-4 right-4 z-[60] max-w-sm animate-in slide-in-from-right-2 duration-300">
+          {alertMessage.type === 'success' ? (
+            <SuccessToast 
+              message={alertMessage.message} 
+              description={alertMessage.description}
+              autoClose={3000}
+              onClose={() => setAlertMessage(prev => ({ ...prev, show: false }))}
+            />
+          ) : (
+            <ErrorToast 
+              message={alertMessage.message} 
+              description={alertMessage.description}
+              autoClose={5000}
+              onClose={() => setAlertMessage(prev => ({ ...prev, show: false }))}
+            />
+          )}
+        </div>
+      )}
+      
       <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-2xl h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-4 border-b pb-2">
           <h2 className="text-xl font-bold text-gray-800">Create Recurring Invoice</h2>
@@ -253,7 +311,7 @@ const RecurringInvoiceForm = ({ isOpen, onClose, onInvoiceAdded, isEdit = false,
           </button>
         </div>
 
-        {error && <div className="bg-red-100 text-red-700 p-3 rounded mb-4 text-sm">{error}</div>}
+        {/* {error && <div className="bg-red-100 text-red-700 p-3 rounded mb-4 text-sm">{error}</div>} */}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">

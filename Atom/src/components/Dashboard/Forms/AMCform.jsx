@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { toast } from 'react-toastify';
 import { Edit, Trash2 } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
+import ErrorToast from '../messages/ErrorToast';
+import SuccessToast from '../messages/SuccessToast';
 
 const AMCForm = ({
   isEdit = false,
@@ -11,20 +13,26 @@ const AMCForm = ({
   apiBaseUrl,
   dropdownOptions = {},
 }) => {
+  const location = useLocation();
+  
+  // Check if form is opened via navigation (with customerId parameter)
+  const isNavigationMode = () => {
+    const queryParams = new URLSearchParams(location.search);
+    return queryParams.has('customerId');
+  };
+  
   const [newAMC, setNewAMC] = useState({
     customer: '',
     referenceId: '',
     amc_name: '',
     invoiceFrequency: '',
     amcType: '',
-    paymentTerms: '',
     startDate: '',
     endDate: '',
     equipmentNo: '',
     notes: '',
     isGenerateContractNow: false,
     noOfServices: '',
-    files: null,
     amcServiceItem: '',
     price: '',
     no_of_lifts: '',
@@ -35,19 +43,53 @@ const AMCForm = ({
   });
 
   const [existingAmcTypes, setExistingAmcTypes] = useState([]);
-  const [existingPaymentTerms, setExistingPaymentTerms] = useState([]);
   const [amcServiceItems, setAmcServiceItems] = useState([]);
   const [customers, setCustomers] = useState([]); // New state for customers
 
   const [modalState, setModalState] = useState({
-    amcType: { isOpen: false, value: '', isEditing: false, editId: null },
-    paymentTerms: { isOpen: false, value: '', isEditing: false, editId: null },
+    amcType: { isOpen: false, value: '', price: '', isEditing: false, editId: null },
   });
+
+  const [alertMessage, setAlertMessage] = useState({
+    show: false,
+    type: '', // 'success' or 'error'
+    message: '',
+    description: ''
+  });
+
+  // Helper functions for showing alert messages
+  const showSuccessMessage = (message, description = '', autoHide = true) => {
+    setAlertMessage({
+      show: true,
+      type: 'success',
+      message,
+      description
+    });
+    // Auto-hide after 3 seconds only if autoHide is true
+    if (autoHide) {
+      setTimeout(() => {
+        setAlertMessage(prev => ({ ...prev, show: false }));
+      }, 3000);
+    }
+  };
+
+  const showErrorMessage = (message, description = '') => {
+    setAlertMessage({
+      show: true,
+      type: 'error',
+      message,
+      description
+    });
+    // Auto-hide after 5 seconds for errors
+    setTimeout(() => {
+      setAlertMessage(prev => ({ ...prev, show: false }));
+    }, 5000);
+  };
 
   const createAxiosInstance = () => {
     const token = localStorage.getItem('access_token');
     if (!token) {
-      toast.error('Please log in to continue.');
+      showErrorMessage('Please log in to continue.');
       window.location.href = '/login';
       return null;
     }
@@ -63,7 +105,6 @@ const AMCForm = ({
     try {
       const endpoints = {
         amcType: 'amc/amc-types',
-        paymentTerms: 'amc/payment-terms',
         amcServiceItem: 'auth/item-list',
         customer: 'sales/customer-list', // Added customer endpoint
       };
@@ -71,8 +112,6 @@ const AMCForm = ({
       const response = await axiosInstance.get(`${apiBaseUrl}/${endpoint}/`);
       if (field === 'amcType') {
         setExistingAmcTypes(response.data);
-      } else if (field === 'paymentTerms') {
-        setExistingPaymentTerms(response.data);
       } else if (field === 'amcServiceItem') {
         setAmcServiceItems(response.data);
       } else if (field === 'customer') {
@@ -81,23 +120,39 @@ const AMCForm = ({
     } catch (error) {
       console.error(`Error fetching ${field}:`, error);
       if (error.response?.status === 401) {
-        toast.error('Session expired. Please log in again.');
+        showErrorMessage('Session expired. Please log in again.');
         localStorage.removeItem('access_token');
         window.location.href = '/login';
       } else if (retryCount > 0 && error.code === 'ERR_NETWORK') {
         setTimeout(() => fetchOptions(field, retryCount - 1), 2000);
       } else {
-        toast.error(`Failed to fetch ${field.replace(/([A-Z])/g, ' $1').toLowerCase().trim()}.`);
+        showErrorMessage(`Failed to fetch ${field.replace(/([A-Z])/g, ' $1').toLowerCase().trim()}.`);
       }
     }
   };
 
   useEffect(() => {
     fetchOptions('amcType');
-    fetchOptions('paymentTerms');
     fetchOptions('amcServiceItem');
     fetchOptions('customer'); // Fetch customers on mount
   }, []);
+
+  // Handle customerId parameter for auto-population
+  useEffect(() => {
+    console.log('AMC Form - Checking navigation mode:', isNavigationMode());
+    console.log('AMC Form - Location search:', location.search);
+    
+    if (isNavigationMode()) {
+      const queryParams = new URLSearchParams(location.search);
+      const customerId = queryParams.get('customerId');
+      console.log('AMC Form - Customer ID from URL:', customerId);
+      
+      if (customerId) {
+        console.log('AMC Form - Fetching customer details for ID:', customerId);
+        fetchCustomerDetails(customerId);
+      }
+    }
+  }, [location.search, customers]);
 
   useEffect(() => {
     const price = parseFloat(newAMC.price) || 0;
@@ -135,49 +190,102 @@ const AMCForm = ({
     } catch (error) {
       console.error('Error fetching next reference ID:', error);
       if (error.response?.status === 401) {
-        toast.error('Session expired. Please log in again.');
+        showErrorMessage('Session expired. Please log in again.');
         localStorage.removeItem('access_token');
         window.location.href = '/login';
       } else {
-        toast.error('Failed to generate reference ID. Please try again.');
+        showErrorMessage('Failed to generate reference ID. Please try again.');
       }
+    }
+  };
+
+  const fetchCustomerDetails = async (customerId) => {
+    console.log('fetchCustomerDetails called with customerId:', customerId);
+    console.log('Available customers:', customers);
+    
+    // Wait for customers to be loaded if not already loaded
+    if (customers.length === 0) {
+      console.log('Customers not loaded yet, waiting...');
+      setTimeout(() => fetchCustomerDetails(customerId), 1000);
+      return;
+    }
+
+    try {
+      // Find customer by reference_id in the customers list
+      const customerData = customers.find(customer => 
+        customer.reference_id === customerId || 
+        customer.id === customerId ||
+        customer.site_id === customerId
+      );
+      
+      console.log('Found customer data:', customerData);
+      
+      if (customerData) {
+        // Auto-populate customer field
+        setNewAMC(prev => ({
+          ...prev,
+          customer: customerData.site_name || '',
+          equipmentNo: customerData.job_no || '', // Auto-populate equipment number with job number
+        }));
+        
+        showSuccessMessage('Customer details loaded successfully.');
+      } else {
+        console.log('Customer not found with ID:', customerId);
+        showErrorMessage(`Customer with ID ${customerId} not found.`);
+      }
+    } catch (error) {
+      console.error('Error processing customer details:', error);
+      showErrorMessage(`Failed to load customer details. Error: ${error.message}`);
     }
   };
 
   const handleInputChange = (e) => {
-    const { name, value, type, checked, files } = e.target;
+    const { name, value, type, checked } = e.target;
     if (type === 'checkbox') {
       setNewAMC((prev) => ({ ...prev, [name]: checked }));
-    } else if (type === 'file') {
-      const file = files[0];
-      if (file && file.size > 1024 * 1024) {
-        toast.error('File size exceeds 1 MB limit.');
-        return;
-      }
-      setNewAMC((prev) => ({ ...prev, [name]: file }));
     } else {
-      setNewAMC((prev) => ({ ...prev, [name]: value }));
+      setNewAMC((prev) => {
+        const updatedAMC = { ...prev, [name]: value };
+        
+        // Auto-calculate end date when start date is selected
+        if (name === 'startDate' && value) {
+          const startDate = new Date(value);
+          const endDate = new Date(startDate);
+          endDate.setFullYear(endDate.getFullYear() + 1);
+          
+          // Format the date as YYYY-MM-DD for the input field
+          const formattedEndDate = endDate.toISOString().split('T')[0];
+          updatedAMC.endDate = formattedEndDate;
+        }
+        
+        return updatedAMC;
+      });
     }
   };
 
-  const openAddModal = (field, isEditing = false, editId = null, editValue = '') => {
+  const openAddModal = (field, isEditing = false, editId = null, editValue = '', editPrice = '') => {
     setModalState((prev) => ({
       ...prev,
-      [field]: { isOpen: true, value: editValue, isEditing, editId },
+      [field]: { isOpen: true, value: editValue, price: editPrice, isEditing, editId },
     }));
   };
 
   const closeAddModal = (field) => {
     setModalState((prev) => ({
       ...prev,
-      [field]: { isOpen: false, value: '', isEditing: false, editId: null },
+      [field]: { isOpen: false, value: '', price: '', isEditing: false, editId: null },
     }));
   };
 
   const handleAddOption = async (field) => {
     const value = modalState[field].value.trim();
+    const price = modalState[field].price.trim();
     if (!value) {
-      toast.error(`Please enter a ${field.replace(/([A-Z])/g, ' $1').toLowerCase().trim()}.`);
+      showErrorMessage(`Please enter a ${field.replace(/([A-Z])/g, ' $1').toLowerCase().trim()}.`);
+      return;
+    }
+    if (!price || isNaN(parseFloat(price))) {
+      showErrorMessage('Please enter a valid price.');
       return;
     }
 
@@ -187,11 +295,9 @@ const AMCForm = ({
     try {
       const apiEndpoints = {
         amcType: 'amc-types/edit',
-        paymentTerms: 'payment-terms/edit',
       };
       const addEndpoints = {
         amcType: 'amc-types/add',
-        paymentTerms: 'payment-terms/add',
       };
       const isEditing = modalState[field].isEditing;
       const editId = modalState[field].editId;
@@ -199,16 +305,16 @@ const AMCForm = ({
       if (isEditing) {
         await axiosInstance.put(
           `${apiBaseUrl}/amc/${apiEndpoints[field]}/${editId}/`,
-          { name: value }
+          { name: value, price: parseFloat(price) }
         );
-        toast.success(`${field.replace(/([A-Z])/g, ' $1').trim()} updated successfully.`);
+        showSuccessMessage(`${field.replace(/([A-Z])/g, ' $1').trim()} updated successfully.`);
       } else {
         await axiosInstance.post(
           `${apiBaseUrl}/amc/${addEndpoints[field]}/`,
-          { name: value }
+          { name: value, price: parseFloat(price) }
         );
         setNewAMC((prev) => ({ ...prev, [field]: value }));
-        toast.success(`${field.replace(/([A-Z])/g, ' $1').trim()} added successfully.`);
+        showSuccessMessage(`${field.replace(/([A-Z])/g, ' $1').trim()} added successfully.`);
       }
 
       fetchOptions(field);
@@ -217,12 +323,12 @@ const AMCForm = ({
     } catch (error) {
       console.error(`Error ${isEditing ? 'editing' : 'adding'} ${field}:`, error);
       if (error.response?.status === 401) {
-        toast.error('Session expired. Please log in again.');
+        showErrorMessage('Session expired. Please log in again.');
         localStorage.removeItem('access_token');
         window.location.href = '/login';
       } else {
         const errorMsg = error.response?.data?.name?.[0] || error.response?.data?.error || `Failed to ${isEditing ? 'update' : 'add'} ${field.replace(/([A-Z])/g, ' $1').toLowerCase().trim()}.`;
-        toast.error(errorMsg);
+        showErrorMessage(errorMsg);
       }
     }
   };
@@ -238,21 +344,20 @@ const AMCForm = ({
     try {
       const deleteEndpoints = {
         amcType: 'amc-types/delete',
-        paymentTerms: 'payment-terms/delete',
       };
       await axiosInstance.delete(`${apiBaseUrl}/amc/${deleteEndpoints[field]}/${id}/`);
-      toast.success(`${field.replace(/([A-Z])/g, ' $1').trim()} deleted successfully.`);
+      showSuccessMessage(`${field.replace(/([A-Z])/g, ' $1').trim()} deleted successfully.`);
       fetchOptions(field);
     } catch (error) {
       console.error(`Error deleting ${field}:`, error);
       if (error.response?.status === 401) {
-        toast.error('Session expired. Please log in again.');
+        showErrorMessage('Session expired. Please log in again.');
         localStorage.removeItem('access_token');
         window.location.href = '/login';
       } else {
-        toast.error(
+        showErrorMessage(
           error.response?.data?.error ||
-          `Failed to delete ${field.replace(/([A-Z])/g, ' $1').toLowerCase().trim()}.`
+            `Failed to delete ${field.replace(/([A-Z])/g, ' $1').toLowerCase().trim()}.`
         );
       }
     }
@@ -263,12 +368,12 @@ const AMCForm = ({
     const missingFields = requiredFields.filter(field => !newAMC[field]);
 
     if (missingFields.length > 0) {
-      toast.error(`Please fill in all required fields: ${missingFields.join(', ')}`);
+      showErrorMessage(`Please fill in all required fields: ${missingFields.join(', ')}`);
       return;
     }
 
     if (newAMC.isGenerateContractNow && !newAMC.amcServiceItem) {
-      toast.error('Please select an AMC Service Item when generating contract');
+      showErrorMessage('Please select an AMC Service Item when generating contract');
       return;
     }
 
@@ -279,7 +384,7 @@ const AMCForm = ({
       const selectedCustomer = customers.find(c => c.site_name === newAMC.customer);
       
       if (!selectedCustomer) {
-        toast.error('Selected customer not found');
+        showErrorMessage('Selected customer not found');
         return;
       }
 
@@ -299,15 +404,6 @@ const AMCForm = ({
         }
       }
       
-      if (newAMC.paymentTerms) {
-        const paymentTermsResponse = await axiosInstance.get(`${apiBaseUrl}/amc/payment-terms/`);
-        const selectedPaymentTerms = paymentTermsResponse.data.find(p => p.name === newAMC.paymentTerms);
-        if (selectedPaymentTerms) {
-          formData.append('payment_terms', selectedPaymentTerms.id);
-        } else {
-          throw new Error('Selected Payment Terms not found');
-        }
-      }
       
       formData.append('start_date', newAMC.startDate);
       formData.append('end_date', newAMC.endDate);
@@ -315,9 +411,6 @@ const AMCForm = ({
       formData.append('notes', newAMC.notes || '');
       formData.append('is_generate_contract', newAMC.isGenerateContractNow);
       formData.append('no_of_services', newAMC.noOfServices || '12');
-      if (newAMC.files) {
-        formData.append('files', newAMC.files);
-      }
       if (newAMC.amcServiceItem) {
         formData.append('amc_service_item', newAMC.amcServiceItem);
       }
@@ -338,15 +431,15 @@ const AMCForm = ({
     } catch (error) {
       console.error('Error submitting AMC:', error.response ? error.response.data : error.message);
       if (error.response?.status === 401) {
-        toast.error('Session expired. Please log in again.');
+        showErrorMessage('Session expired. Please log in again.');
         localStorage.removeItem('access_token');
         window.location.href = '/login';
       } else if (error.response?.status === 500) {
-        toast.error('Server error occurred. Please check the console for details or contact support.');
+        showErrorMessage('Server error occurred. Please check the console for details or contact support.');
       } else {
         const errorDetails = error.response?.data || { error: 'An unknown error occurred' };
         Object.entries(errorDetails).forEach(([key, value]) => {
-          toast.error(`${key}: ${Array.isArray(value) ? value[0] : value}`);
+          showErrorMessage(`${key}: ${Array.isArray(value) ? value[0] : value}`);
         });
       }
     }
@@ -354,6 +447,27 @@ const AMCForm = ({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      {/* Fixed positioned messages in right bottom corner */}
+      {alertMessage.show && (
+        <div className="fixed bottom-4 right-4 z-[60] max-w-sm animate-in slide-in-from-right-2 duration-300">
+          {alertMessage.type === 'success' ? (
+            <SuccessToast 
+              message={alertMessage.message} 
+              description={alertMessage.description}
+              autoClose={3000}
+              onClose={() => setAlertMessage(prev => ({ ...prev, show: false }))}
+            />
+          ) : (
+            <ErrorToast 
+              message={alertMessage.message} 
+              description={alertMessage.description}
+              autoClose={5000}
+              onClose={() => setAlertMessage(prev => ({ ...prev, show: false }))}
+            />
+          )}
+        </div>
+      )}
+      
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl overflow-hidden">
         <div className="bg-gradient-to-r from-[#2D3A6B] to-[#243158] px-6 py-4 flex justify-between items-center">
           <h2 className="text-xl font-semibold text-white">{isEdit ? 'Edit AMC' : 'Create AMC'}</h2>
@@ -365,6 +479,34 @@ const AMCForm = ({
         <div className="p-6 max-h-[70vh] overflow-y-auto">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-4">
+              {/* Lift Information Message - Only show during navigation */}
+              {isNavigationMode() && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                <div className="flex items-center">
+                  <div className="flex-shrink-0">
+                    <svg className="h-5 w-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  <div className="ml-3">
+                    <p className="text-sm text-gray-700">
+                      <strong>Add Lift to customer </strong>
+                      <button 
+                        onClick={() => {
+                          // Navigate to lift form or open lift modal
+                          window.open('/dashboard/customers', '_blank');
+                        }}
+                        className="text-blue-600 hover:text-blue-800 underline cursor-pointer font-semibold"
+                      >
+                        here
+                      </button>
+                      <strong>, if you have added Lifts, click to refresh</strong>
+                    </p>
+                  </div>
+                </div>
+              </div>
+              )}
+              
               <div className="form-group">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Customer *
@@ -384,6 +526,7 @@ const AMCForm = ({
                   ))}
                 </select>
               </div>
+              
               <div className="form-group">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Reference ID *
@@ -400,7 +543,7 @@ const AMCForm = ({
               </div>
               <div className="form-group">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  AMC Name
+                  AMC Pack Name
                 </label>
                 <input
                   type="text"
@@ -425,8 +568,8 @@ const AMCForm = ({
                   <option value="semi_annually">Semi Annually</option>
                   <option value="quarterly">Quarterly</option>
                   <option value="monthly">Monthly</option>
-                  <option value="weekly">Weekly</option>
-                  <option value="every_other_weekly">Every Other Weekly</option>
+                  <option value="per service">Per service</option>
+                 
                 </select>
               </div>
               <div className="form-group">
@@ -449,32 +592,6 @@ const AMCForm = ({
                   </select>
                   <button
                     onClick={() => openAddModal('amcType')}
-                    className="px-4 py-2.5 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-all duration-200"
-                  >
-                    +
-                  </button>
-                </div>
-              </div>
-              <div className="form-group">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Payment Terms
-                </label>
-                <div className="flex items-center space-x-2">
-                  <select
-                    name="paymentTerms"
-                    value={newAMC.paymentTerms}
-                    onChange={handleInputChange}
-                    className="block flex-grow px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 appearance-none bg-white"
-                  >
-                    <option value="">Select Payment Terms</option>
-                    {existingPaymentTerms.map((terms) => (
-                      <option key={terms.id} value={terms.name}>
-                        {terms.name}
-                      </option>
-                    ))}
-                  </select>
-                  <button
-                    onClick={() => openAddModal('paymentTerms')}
                     className="px-4 py-2.5 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-all duration-200"
                   >
                     +
@@ -520,17 +637,6 @@ const AMCForm = ({
                   value={newAMC.equipmentNo}
                   onChange={handleInputChange}
                   className="block w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200"
-                />
-              </div>
-              <div className="form-group">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Upload Files
-                </label>
-                <input
-                  type="file"
-                  name="files"
-                  onChange={handleInputChange}
-                  className="block w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100"
                 />
               </div>
               <div className="form-group">
@@ -683,18 +789,34 @@ const AMCForm = ({
               <h3 className="text-lg font-semibold text-gray-800 mb-4">
                 {isEditing ? `Edit ${field.replace(/([A-Z])/g, ' $1').trim()}` : `Add New ${field.replace(/([A-Z])/g, ' $1').trim()}`}
               </h3>
-              <input
-                type="text"
-                value={value}
-                onChange={(e) =>
-                  setModalState((prev) => ({
-                    ...prev,
-                    [field]: { ...prev[field], value: e.target.value },
-                  }))
-                }
-                className="block w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 mb-4"
-                placeholder={`Enter new ${field.replace(/([A-Z])/g, ' $1').toLowerCase().trim()}`}
-              />
+              <div className="space-y-4 mb-4">
+                <input
+                  type="text"
+                  value={value}
+                  onChange={(e) =>
+                    setModalState((prev) => ({
+                      ...prev,
+                      [field]: { ...prev[field], value: e.target.value },
+                    }))
+                  }
+                  className="block w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                  placeholder={`Enter new ${field.replace(/([A-Z])/g, ' $1').toLowerCase().trim()}`}
+                />
+                <input
+                  type="number"
+                  value={modalState[field].price}
+                  onChange={(e) =>
+                    setModalState((prev) => ({
+                      ...prev,
+                      [field]: { ...prev[field], price: e.target.value },
+                    }))
+                  }
+                  className="block w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                  placeholder="Enter price"
+                  min="0"
+                  step="0.01"
+                />
+              </div>
               <div className="mb-4">
                 <h4 className="text-sm font-medium text-gray-700 mb-2">Existing {field.replace(/([A-Z])/g, ' $1').trim()}s</h4>
                 <div className="max-h-40 overflow-y-auto border border-gray-200 rounded-lg">
@@ -702,17 +824,19 @@ const AMCForm = ({
                     <thead>
                       <tr className="bg-gray-100 text-gray-700">
                         <th className="p-2 text-left">Name</th>
+                        <th className="p-2 text-left">Price</th>
                         <th className="p-2 text-right">Actions</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {(field === 'amcType' ? existingAmcTypes : existingPaymentTerms).length > 0 ? (
-                        (field === 'amcType' ? existingAmcTypes : existingPaymentTerms).map((option) => (
+                      {existingAmcTypes.length > 0 ? (
+                        existingAmcTypes.map((option) => (
                           <tr key={option.id} className="border-t">
                             <td className="p-2">{option.name}</td>
+                            <td className="p-2">₹{option.price || '0.00'}</td>
                             <td className="p-2 text-right">
                               <button
-                                onClick={() => openAddModal(field, true, option.id, option.name)}
+                                onClick={() => openAddModal(field, true, option.id, option.name, option.price)}
                                 className="text-blue-500 hover:text-blue-700 mr-2"
                                 title="Edit"
                               >
@@ -730,7 +854,7 @@ const AMCForm = ({
                         ))
                       ) : (
                         <tr>
-                          <td colSpan="2" className="p-2 text-center text-gray-500">
+                          <td colSpan="3" className="p-2 text-center text-gray-500">
                             No {field.replace(/([A-Z])/g, ' $1').toLowerCase().trim()}s found
                           </td>
                         </tr>
@@ -748,8 +872,8 @@ const AMCForm = ({
                 </button>
                 <button
                   onClick={() => handleAddOption(field)}
-                  disabled={!value.trim()}
-                  className={`px-6 py-2.5 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg text-white font-medium transition-all duration-200 ${!value.trim() ? 'opacity-50 cursor-not-allowed' : 'hover:from-blue-600 hover:to-blue-700'}`}
+                  disabled={!value.trim() || !modalState[field].price.trim()}
+                  className={`px-6 py-2.5 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg text-white font-medium transition-all duration-200 ${!value.trim() || !modalState[field].price.trim() ? 'opacity-50 cursor-not-allowed' : 'hover:from-blue-600 hover:to-blue-700'}`}
                 >
                   {isEditing ? `Update ${field.replace(/([A-Z])/g, ' $1').trim()}` : `Add ${field.replace(/([A-Z])/g, ' $1').trim()}`}
                 </button>

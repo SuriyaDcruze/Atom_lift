@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { toast } from 'react-toastify';
+import ErrorToast from '../messages/ErrorToast';
+import SuccessToast from '../messages/SuccessToast';
 
 const InvoiceForm = ({
   onClose,
@@ -21,11 +22,47 @@ const InvoiceForm = ({
   const [customerList, setCustomerList] = useState([]);
   const [amcList, setAmcList] = useState([]);
 
+  const [alertMessage, setAlertMessage] = useState({
+    show: false,
+    type: '', // 'success' or 'error'
+    message: '',
+    description: ''
+  });
+
+  // Helper functions for showing alert messages
+  const showSuccessMessage = (message, description = '', autoHide = true) => {
+    setAlertMessage({
+      show: true,
+      type: 'success',
+      message,
+      description
+    });
+    // Auto-hide after 3 seconds only if autoHide is true
+    if (autoHide) {
+      setTimeout(() => {
+        setAlertMessage(prev => ({ ...prev, show: false }));
+      }, 3000);
+    }
+  };
+
+  const showErrorMessage = (message, description = '') => {
+    setAlertMessage({
+      show: true,
+      type: 'error',
+      message,
+      description
+    });
+    // Auto-hide after 5 seconds for errors
+    setTimeout(() => {
+      setAlertMessage(prev => ({ ...prev, show: false }));
+    }, 5000);
+  };
+
   useEffect(() => {
     const fetchDropdowns = async () => {
       const token = localStorage.getItem('access_token');
       if (!token) {
-        toast.error('Please log in to continue.');
+        showErrorMessage('Please log in to continue.');
         window.location.href = '/login';
         return;
       }
@@ -37,7 +74,7 @@ const InvoiceForm = ({
         );
         setCustomerList(customerRes.data || []);
       } catch (err) {
-        toast.error('Failed to fetch customer list.');
+        showErrorMessage('Failed to fetch customer list.');
       }
       try {
         // Fetch AMC list
@@ -47,7 +84,7 @@ const InvoiceForm = ({
         );
         setAmcList(amcRes.data || []);
       } catch (err) {
-        toast.error('Failed to fetch AMC list.');
+        showErrorMessage('Failed to fetch AMC list.');
       }
       try {
         // Fetch last invoice to generate reference_id
@@ -67,7 +104,7 @@ const InvoiceForm = ({
           reference_id: newRefId,
         }));
       } catch (err) {
-        toast.error('Failed to fetch invoice list for reference ID.');
+        showErrorMessage('Failed to fetch invoice list for reference ID.');
       }
     };
     fetchDropdowns();
@@ -135,7 +172,28 @@ const InvoiceForm = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      {/* Fixed positioned messages in right bottom corner */}
+      {alertMessage.show && (
+        <div className="fixed bottom-4 right-4 z-[60] max-w-sm animate-in slide-in-from-right-2 duration-300">
+          {alertMessage.type === 'success' ? (
+            <SuccessToast 
+              message={alertMessage.message} 
+              description={alertMessage.description}
+              autoClose={3000}
+              onClose={() => setAlertMessage(prev => ({ ...prev, show: false }))}
+            />
+          ) : (
+            <ErrorToast 
+              message={alertMessage.message} 
+              description={alertMessage.description}
+              autoClose={5000}
+              onClose={() => setAlertMessage(prev => ({ ...prev, show: false }))}
+            />
+          )}
+        </div>
+      )}
+      
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-3xl overflow-hidden">
         {/* Modal Header */}
         <div className="bg-gradient-to-r from-[#2D3A6B] to-[#243158] p-6">

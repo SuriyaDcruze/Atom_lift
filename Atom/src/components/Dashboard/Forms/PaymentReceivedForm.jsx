@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import axios from 'axios';
+import ErrorToast from '../messages/ErrorToast';
+import SuccessToast from '../messages/SuccessToast';
 
 const PaymentReceivedForm = ({ isOpen, onClose, onPaymentAdded }) => {
   const [formData, setFormData] = useState({
@@ -15,13 +17,48 @@ const PaymentReceivedForm = ({ isOpen, onClose, onPaymentAdded }) => {
   });
   const [customers, setCustomers] = useState([]);
   const [invoices, setInvoices] = useState([]);
-  const [error, setError] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const [alertMessage, setAlertMessage] = useState({
+    show: false,
+    type: '', // 'success' or 'error'
+    message: '',
+    description: ''
+  });
+
+  // Helper functions for showing alert messages
+  const showSuccessMessage = (message, description = '', autoHide = true) => {
+    setAlertMessage({
+      show: true,
+      type: 'success',
+      message,
+      description
+    });
+    // Auto-hide after 3 seconds only if autoHide is true
+    if (autoHide) {
+      setTimeout(() => {
+        setAlertMessage(prev => ({ ...prev, show: false }));
+      }, 3000);
+    }
+  };
+
+  const showErrorMessage = (message, description = '') => {
+    setAlertMessage({
+      show: true,
+      type: 'error',
+      message,
+      description
+    });
+    // Auto-hide after 5 seconds for errors
+    setTimeout(() => {
+      setAlertMessage(prev => ({ ...prev, show: false }));
+    }, 5000);
+  };
 
   const createAxiosInstance = () => {
     const token = localStorage.getItem('access_token');
     if (!token) {
-      setError('Authentication token not found');
+      showErrorMessage('Authentication token not found');
       return null;
     }
     return axios.create({
@@ -40,12 +77,12 @@ const PaymentReceivedForm = ({ isOpen, onClose, onPaymentAdded }) => {
     } catch (error) {
       console.error(`Error fetching ${endpoint}:`, error);
       if (error.response?.status === 401) {
-        setError('Session expired. Please log in again.');
+        showErrorMessage('Session expired. Please log in again.');
       } else if (retryCount > 0 && error.code === 'ERR_NETWORK') {
         console.log(`Retrying fetch for ${endpoint}... (${retryCount} attempts left)`);
         setTimeout(() => fetchData(endpoint, setter, retryCount - 1), 2000);
       } else {
-        setError(`Failed to fetch ${endpoint.replace(/[-]/g, ' ').trim()}.`);
+        showErrorMessage(`Failed to fetch ${endpoint.replace(/[-]/g, ' ').trim()}.`);
       }
     }
   };
@@ -74,11 +111,11 @@ const PaymentReceivedForm = ({ isOpen, onClose, onPaymentAdded }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError(null);
+    // Clear any previous messages
     setIsSubmitting(true);
 
     if (!formData.customer) {
-      setError('Please select a customer.');
+      showErrorMessage('Please select a customer.');
       setIsSubmitting(false);
       return;
     }
@@ -125,7 +162,7 @@ const PaymentReceivedForm = ({ isOpen, onClose, onPaymentAdded }) => {
         unusedAmount: ''
       });
     } catch (err) {
-      setError(err.message || 'Failed to submit payment');
+      showErrorMessage(err.message || 'Failed to submit payment');
       console.error('Submission error:', err.response?.data);
     } finally {
       setIsSubmitting(false);
@@ -135,7 +172,28 @@ const PaymentReceivedForm = ({ isOpen, onClose, onPaymentAdded }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-opacity-50 flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      {/* Fixed positioned messages in right bottom corner */}
+      {alertMessage.show && (
+        <div className="fixed bottom-4 right-4 z-[60] max-w-sm animate-in slide-in-from-right-2 duration-300">
+          {alertMessage.type === 'success' ? (
+            <SuccessToast 
+              message={alertMessage.message} 
+              description={alertMessage.description}
+              autoClose={3000}
+              onClose={() => setAlertMessage(prev => ({ ...prev, show: false }))}
+            />
+          ) : (
+            <ErrorToast 
+              message={alertMessage.message} 
+              description={alertMessage.description}
+              autoClose={5000}
+              onClose={() => setAlertMessage(prev => ({ ...prev, show: false }))}
+            />
+          )}
+        </div>
+      )}
+      
       <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-2xl">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-bold text-gray-800">Add Payment Received</h2>
@@ -144,7 +202,7 @@ const PaymentReceivedForm = ({ isOpen, onClose, onPaymentAdded }) => {
           </button>
         </div>
 
-        {error && <div className="text-red-500 mb-4">{error}</div>}
+        {/* Alert messages are handled by the alert system */}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="max-h-[60vh] overflow-y-auto pr-2">

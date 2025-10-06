@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   Search, 
   Printer, 
@@ -12,8 +12,24 @@ import {
   List,
   ChevronDown
 } from 'lucide-react';
+import ComplaintForm from './Forms/ComplaintForm';
 
 const Orders = () => {
+  const [isComplaintFormOpen, setIsComplaintFormOpen] = useState(false);
+
+  const handleCreateComplaint = () => {
+    setIsComplaintFormOpen(true);
+  };
+
+  const handleComplaintFormClose = () => {
+    setIsComplaintFormOpen(false);
+  };
+
+  const handleComplaintFormSuccess = () => {
+    setIsComplaintFormOpen(false);
+    // You can add additional logic here like refreshing the orders list
+  };
+
   return (
     <div className="p-4 bg-gray-100 min-h-screen">
       {/* Header Section */}
@@ -28,7 +44,10 @@ const Orders = () => {
             <Download className="h-4 w-4" />
             Export
           </button>
-          <button className="px-4 py-2 bg-[#243158] text-white rounded-lg shadow-md flex items-center gap-2">
+          <button 
+            onClick={handleCreateComplaint}
+            className="px-4 py-2 bg-[#243158] text-white rounded-lg shadow-md flex items-center gap-2 hover:bg-[#1a2547] transition-colors"
+          >
             <Plus className="h-4 w-4" />
             Create Complaint
           </button>
@@ -103,7 +122,7 @@ const Orders = () => {
               <th className="p-3 min-w-[80px] text-sm font-medium">SOLUTION</th>
             </tr>
           </thead>
-          <tbody>
+          {/* <tbody>
             <tr className="border-b hover:bg-gray-50">
               <td className="p-3 text-sm">567</td>
               <td className="p-3 text-sm">23.06.2025</td>
@@ -134,9 +153,9 @@ const Orders = () => {
                   <Printer className="h-4 w-4" />
                 </button>
               </td>
-            </tr>
+            </tr> */}
             {/* Additional row example */}
-            <tr className="border-b hover:bg-gray-50">
+            {/* <tr className="border-b hover:bg-gray-50">
               <td className="p-3 text-sm">568</td>
               <td className="p-3 text-sm">24.06.2025</td>
               <td className="p-3">
@@ -166,10 +185,25 @@ const Orders = () => {
                   <Printer className="h-4 w-4" />
                 </button>
               </td>
-            </tr>
-          </tbody>
+            </tr> */}
+          {/* </tbody> */}
         </table>
       </div>
+
+      {/* Complaint Form Modal */}
+      {isComplaintFormOpen && (
+        <ComplaintForm
+          isEdit={false}
+          initialData={{}}
+          onClose={handleComplaintFormClose}
+          onSubmitSuccess={handleComplaintFormSuccess}
+          onSubmitError={(error) => {
+            console.error('Complaint form error:', error);
+          }}
+          apiBaseUrl={import.meta.env.VITE_BASE_API}
+          dropdownOptions={{}}
+        />
+      )}
     </div>
   );
 };

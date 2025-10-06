@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { toast } from 'react-toastify';
 import { X, Edit, Trash2 } from 'lucide-react';
+import ErrorToast from '../messages/ErrorToast';
+import SuccessToast from '../messages/SuccessToast';
 
 const apiBaseUrl = import.meta.env.VITE_BASE_API;
 
@@ -29,13 +30,48 @@ const ComplaintForm = ({ isEdit, initialData, onClose, onSubmitSuccess, onSubmit
   const [employeeModal, setEmployeeModal] = useState({ isOpen: false, value: '', isEditing: false, editId: null });
   const [loading, setLoading] = useState(false);
   const [optionsLoading, setOptionsLoading] = useState({ customers: true, employees: true });
+  const [alertMessage, setAlertMessage] = useState({
+    show: false,
+    type: '', // 'success' or 'error'
+    message: '',
+    description: ''
+  });
+
+  // Helper functions for showing alert messages
+  const showSuccessMessage = (message, description = '', autoHide = true) => {
+    setAlertMessage({
+      show: true,
+      type: 'success',
+      message,
+      description
+    });
+    // Auto-hide after 3 seconds only if autoHide is true
+    if (autoHide) {
+      setTimeout(() => {
+        setAlertMessage(prev => ({ ...prev, show: false }));
+      }, 3000);
+    }
+  };
+
+  const showErrorMessage = (message, description = '') => {
+    setAlertMessage({
+      show: true,
+      type: 'error',
+      message,
+      description
+    });
+    // Auto-hide after 5 seconds for errors
+    setTimeout(() => {
+      setAlertMessage(prev => ({ ...prev, show: false }));
+    }, 5000);
+  };
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         const token = localStorage.getItem('access_token');
         if (!token) {
-          toast.error('Please log in to continue.');
+          showErrorMessage('Please log in to continue.');
           window.location.href = '/login';
           return;
         }
@@ -73,7 +109,7 @@ const ComplaintForm = ({ isEdit, initialData, onClose, onSubmitSuccess, onSubmit
         }
       } catch (error) {
         console.error('Error fetching data:', error);
-        toast.error('Failed to fetch data.');
+        showErrorMessage('Failed to fetch data.');
         setOptionsLoading((prev) => ({ ...prev, customers: false, employees: false }));
       }
     };
@@ -134,7 +170,7 @@ const ComplaintForm = ({ isEdit, initialData, onClose, onSubmitSuccess, onSubmit
   const handleAddEmployee = async () => {
     const value = employeeModal.value.trim();
     if (!value) {
-      toast.error('Please enter an employee name.');
+      showErrorMessage('Please enter an employee name.');
       return;
     }
 
@@ -147,10 +183,10 @@ const ComplaintForm = ({ isEdit, initialData, onClose, onSubmitSuccess, onSubmit
       let response;
       if (isEditing) {
         response = await axios.put(`${apiBaseUrl}/auth/edit-employee/${editId}/`, { name: value }, { headers: { Authorization: `Bearer ${token}` } });
-        toast.success('Employee updated successfully.');
+        showSuccessMessage('Employee updated successfully.');
       } else {
         response = await axios.post(`${apiBaseUrl}/auth/add-employee/`, { name: value }, { headers: { Authorization: `Bearer ${token}` } });
-        toast.success('Employee added successfully.');
+        showSuccessMessage('Employee added successfully.');
         setFormData(prev => ({ ...prev, assignTo: response.data.id }));
       }
 
@@ -160,7 +196,7 @@ const ComplaintForm = ({ isEdit, initialData, onClose, onSubmitSuccess, onSubmit
       closeEmployeeModal();
     } catch (error) {
       console.error('Error handling employee:', error);
-      toast.error(error.response?.data?.error || `Failed to ${employeeModal.isEditing ? 'update' : 'add'} employee.`);
+      showErrorMessage(error.response?.data?.error || `Failed to ${employeeModal.isEditing ? 'update' : 'add'} employee.`);
     } finally {
       setLoading(false);
     }
@@ -172,14 +208,14 @@ const ComplaintForm = ({ isEdit, initialData, onClose, onSubmitSuccess, onSubmit
     try {
       const token = localStorage.getItem('access_token');
       await axios.delete(`${apiBaseUrl}/auth/delete-employee/${id}/`, { headers: { Authorization: `Bearer ${token}` } });
-      toast.success('Employee deleted successfully.');
+      showSuccessMessage('Employee deleted successfully.');
 
       // Refresh employees list
       const employeesResponse = await axios.get(`${apiBaseUrl}/auth/employees/`, { headers: { Authorization: `Bearer ${token}` } });
       setEmployees(employeesResponse.data);
     } catch (error) {
       console.error('Error deleting employee:', error);
-      toast.error(error.response?.data?.error || 'Failed to delete employee.');
+      showErrorMessage(error.response?.data?.error || 'Failed to delete employee.');
     }
   };
 
@@ -203,8 +239,13 @@ const ComplaintForm = ({ isEdit, initialData, onClose, onSubmitSuccess, onSubmit
         },
       });
 
-      onSubmitSuccess(isEdit ? 'Complaint updated successfully!' : 'Complaint created successfully!');
-      onClose();
+      showSuccessMessage(isEdit ? 'Complaint updated successfully!' : 'Complaint created successfully!', '', false);
+      
+      // Wait for the success message to be visible before closing
+      setTimeout(() => {
+        onSubmitSuccess(isEdit ? 'Complaint updated successfully!' : 'Complaint created successfully!');
+        onClose();
+      }, 2000);
     } catch (error) {
       console.error('Error submitting complaint:', error);
       onSubmitError(error.response?.data?.error || (isEdit ? 'Failed to update complaint' : 'Failed to create complaint'));
@@ -223,6 +264,28 @@ const ComplaintForm = ({ isEdit, initialData, onClose, onSubmitSuccess, onSubmit
             Fill in all required fields (<span className="text-red-300">*</span>)
           </p>
         </div>
+        
+        {/* Alert Messages */}
+        {alertMessage.show && (
+          <div className="fixed bottom-4 right-4 z-[60] max-w-sm animate-in slide-in-from-right-2 duration-300">
+            {alertMessage.type === 'success' ? (
+              <SuccessToast 
+                message={alertMessage.message} 
+                description={alertMessage.description}
+                autoClose={3000}
+                onClose={() => setAlertMessage(prev => ({ ...prev, show: false }))}
+              />
+            ) : (
+              <ErrorToast 
+                message={alertMessage.message} 
+                description={alertMessage.description}
+                autoClose={5000}
+                onClose={() => setAlertMessage(prev => ({ ...prev, show: false }))}
+              />
+            )}
+          </div>
+        )}
+        
         {/* Modal Body */}
         <form onSubmit={handleSubmit}>
           <div className="p-6 max-h-[70vh] overflow-y-auto">
@@ -474,7 +537,10 @@ const ComplaintForm = ({ isEdit, initialData, onClose, onSubmitSuccess, onSubmit
           <div className="bg-gray-50 px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
             <button
               type="button"
-              onClick={onClose}
+              onClick={() => {
+                setAlertMessage({ show: false, type: '', message: '', description: '' });
+                onClose();
+              }}
               className="px-6 py-2.5 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-100 transition-all duration-200"
             >
               Cancel

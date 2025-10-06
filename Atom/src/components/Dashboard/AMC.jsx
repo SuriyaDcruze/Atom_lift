@@ -13,8 +13,8 @@ const invoiceFrequencyOptionsStatic = [
   { value: 'semi_annually', label: 'Semi Annually' },
   { value: 'quarterly', label: 'Quarterly' },
   { value: 'monthly', label: 'Monthly' },
-  { value: 'weekly', label: 'Weekly' },
-  { value: 'every_other_weekly', label: 'Every Other Weekly' },
+  { value: 'per service', label: 'Per service' },
+ 
 ];
 
 const AMC = () => {
@@ -31,8 +31,6 @@ const AMC = () => {
     invoiceFrequency: 'ALL',
     paymentTerms: 'ALL',
     status: 'ALL',
-    startDate: 'ALL',
-    endDate: 'ALL',
   });
 
   // State for dropdown options
@@ -40,7 +38,7 @@ const AMC = () => {
   const [invoiceFrequencyOptions] = useState(invoiceFrequencyOptionsStatic.map(option => option.value));
   const [amcTypeOptions, setAmcTypeOptions] = useState([]);
   const [paymentTermsOptions, setPaymentTermsOptions] = useState([]);
-  const [statusOptions, setStatusOptions] = useState(['Active', 'Expired', 'Renew In Progress']);
+  const [statusOptions, setStatusOptions] = useState(['Active', 'Expired', 'Cancelled','On Hold']);
 
   // State for modals
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -163,8 +161,6 @@ const AMC = () => {
       invoiceFrequency: 'ALL',
       paymentTerms: 'ALL',
       status: 'ALL',
-      startDate: 'ALL',
-      endDate: 'ALL',
     });
     setCurrentPage(1);
   };
@@ -289,16 +285,6 @@ const AMC = () => {
   const filteredAMCs = amcData.filter(amc => {
     const matchesAll = Object.entries(filters).every(([key, value]) => {
       if (value === 'ALL') return true;
-      if (key === 'startDate' && value !== 'ALL') {
-        const filterDate = new Date(value).setHours(0, 0, 0, 0);
-        const amcDate = new Date(amc.startDate).setHours(0, 0, 0, 0);
-        return amcDate >= filterDate;
-      }
-      if (key === 'endDate' && value !== 'ALL') {
-        const filterDate = new Date(value).setHours(0, 0, 0, 0);
-        const amcDate = new Date(amc.endDate).setHours(0, 0, 0, 0);
-        return amcDate <= filterDate;
-      }
       return amc[key] === value;
     });
     return matchesAll;
@@ -461,7 +447,7 @@ const AMC = () => {
 
       {/* Filters Section */}
       <div className="bg-white p-3 md:p-4 rounded-lg shadow-lg mb-4 md:mb-6">
-        <div className="grid grid-cols-1 xs:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 2xl:grid-cols-7 gap-3 md:gap-4 items-end">
+        <div className="grid grid-cols-1 xs:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-5 gap-3 md:gap-4 items-end">
           {/* Customer */}
           <div className="xl:col-span-1">
             <label className="block text-sm font-medium text-gray-700 mb-1">Customer</label>
@@ -548,32 +534,9 @@ const AMC = () => {
             </select>
           </div>
 
-          {/* Start Date */}
-          <div className="xl:col-span-1">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
-            <input
-              type="date"
-              name="startDate"
-              value={filters.startDate === 'ALL' ? '' : filters.startDate}
-              onChange={handleFilterChange}
-              className="w-full border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-[#243158] text-sm md:text-base"
-            />
-          </div>
-
-          {/* End Date */}
-          <div className="xl:col-span-1">
-            <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
-            <input
-              type="date"
-              name="endDate"
-              value={filters.endDate === 'ALL' ? '' : filters.endDate}
-              onChange={handleFilterChange}
-              className="w-full border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-[#243158] text-sm md:text-base"
-            />
-          </div>
 
           {/* Filter Actions */}
-          <div className="flex flex-row space-x-2 col-span-1 xs:col-span-2 md:col-span-3 lg:col-span-4 xl:col-span-2 2xl:col-span-1">
+          <div className="flex flex-row space-x-2 col-span-1 xs:col-span-2 md:col-span-3 lg:col-span-4 xl:col-span-2 2xl:col-span-2">
             <button
               onClick={resetFilters}
               className="flex-1 bg-gray-200 text-gray-700 px-3 md:px-4 py-2 rounded-lg hover:bg-gray-300 transition duration-200 text-sm md:text-base"

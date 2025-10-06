@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Edit, MoreVertical, Plus, Search, ChevronDown, ChevronUp, Sliders, List, Trash2 } from 'lucide-react';
+import { Edit, MoreVertical, Plus, Search, ChevronDown, ChevronUp, Sliders, List, Trash2, Eye } from 'lucide-react';
 import CustomerForm from '../Dashboard/Forms/CustomerForm';
 import { toast } from 'react-toastify';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 
 const apiBaseUrl = import.meta.env.VITE_BASE_API;
 
@@ -78,7 +79,8 @@ const CustomerRow = ({
   toggleExpand,
   isSelected,
   onSelect,
-  onDelete
+  onDelete,
+  onViewDetails
 }) => {
   return (
     <>
@@ -119,6 +121,14 @@ const CustomerRow = ({
         </td>
         
         <td className="px-4 py-3 whitespace-nowrap flex justify-end space-x-2">
+          <button 
+            onClick={() => onViewDetails(customer)}
+            className="text-green-500 hover:text-green-700 p-1 transition-colors"
+            title="View Details"
+          >
+            <Eye size={18} />
+          </button>
+
           <button 
             onClick={() => onEdit(customer)}
             className="text-blue-500 hover:text-blue-700 p-1 transition-colors"
@@ -170,6 +180,7 @@ const CustomerRow = ({
 };
 
 const Customers = () => {
+  const navigate = useNavigate();
   const [showForm, setShowForm] = useState(false);
   const [editData, setEditData] = useState(null);
   const [expandedRow, setExpandedRow] = useState(null);
@@ -391,6 +402,11 @@ const Customers = () => {
       id: customer.id,
     });
     setShowForm(true);
+  };
+
+  const handleViewDetails = (customer) => {
+    // Navigate to customer details page
+    navigate(`/dashboard/customer/${customer.id}`);
   };
 
   const handleFormSubmitSuccess = async (customerData) => {
@@ -824,6 +840,7 @@ const Customers = () => {
                       key={customer.id}
                       customer={customer}
                       onEdit={handleEditCustomer}
+                      onViewDetails={handleViewDetails}
                       expandedRow={expandedRow}
                       toggleExpand={() => toggleExpandRow(customer.site_id)}
                       isSelected={selectedCustomers.includes(customer.id)}

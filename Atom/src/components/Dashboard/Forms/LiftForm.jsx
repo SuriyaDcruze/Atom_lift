@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { toast } from 'react-toastify';
 import { Edit, Trash2 } from 'lucide-react';
+import ErrorToast from '../messages/ErrorToast';
+import SuccessToast from '../messages/SuccessToast';
 
 const LiftForm = ({
   isEdit = false,
@@ -29,6 +30,10 @@ const LiftForm = ({
     controllerBrand: '',
     cabin: '',
     price: '',
+    blockWing: '',
+    license: '',
+    licenseStartDate: '',
+    licenseExpiryDate: '',
     ...initialData,
   });
 
@@ -58,11 +63,47 @@ const LiftForm = ({
     cabin: { isOpen: false, value: '', isEditing: false, editId: null },
   });
 
+  const [alertMessage, setAlertMessage] = useState({
+    show: false,
+    type: '', // 'success' or 'error'
+    message: '',
+    description: ''
+  });
+
+  // Helper functions for showing alert messages
+  const showSuccessMessage = (message, description = '', autoHide = true) => {
+    setAlertMessage({
+      show: true,
+      type: 'success',
+      message,
+      description
+    });
+    // Auto-hide after 3 seconds only if autoHide is true
+    if (autoHide) {
+      setTimeout(() => {
+        setAlertMessage(prev => ({ ...prev, show: false }));
+      }, 3000);
+    }
+  };
+
+  const showErrorMessage = (message, description = '') => {
+    setAlertMessage({
+      show: true,
+      type: 'error',
+      message,
+      description
+    });
+    // Auto-hide after 5 seconds for errors
+    setTimeout(() => {
+      setAlertMessage(prev => ({ ...prev, show: false }));
+    }, 5000);
+  };
+
   // Centralized Axios instance with Bearer token
   const createAxiosInstance = () => {
     const token = localStorage.getItem('access_token');
     if (!token) {
-      toast.error('Please log in to continue.');
+      showErrorMessage('Please log in to continue.');
       window.location.href = '/login';
       return null;
     }
@@ -100,14 +141,14 @@ const LiftForm = ({
     } catch (error) {
       console.error(`Error fetching ${field}:`, error);
       if (error.response?.status === 401) {
-        toast.error('Session expired. Please log in again.');
+        showErrorMessage('Session expired. Please log in again.');
         localStorage.removeItem('access_token');
         window.location.href = '/login';
       } else if (retryCount > 0 && error.code === 'ERR_NETWORK') {
         console.log(`Retrying fetchOptions for ${field}... (${retryCount} attempts left)`);
         setTimeout(() => fetchOptions(field, retryCount - 1), 2000);
       } else {
-        toast.error(`Failed to fetch ${field.replace(/([A-Z])/g, ' $1').toLowerCase().trim()}.`);
+        showErrorMessage(`Failed to fetch ${field.replace(/([A-Z])/g, ' $1').toLowerCase().trim()}.`);
       }
     }
   };
@@ -156,7 +197,7 @@ const LiftForm = ({
   const handleAddOption = async (field) => {
     const value = modalState[field].value.trim();
     if (!value) {
-      toast.error(`Please enter a ${field.replace(/([A-Z])/g, ' $1').toLowerCase().trim()}.`);
+      showErrorMessage(`Please enter a ${field.replace(/([A-Z])/g, ' $1').toLowerCase().trim()}.`);
       return;
     }
 
@@ -194,14 +235,14 @@ const LiftForm = ({
           `${apiBaseUrl}/auth/${apiEndpoints[field]}/${editId}/`,
           { value }
         );
-        toast.success(`${field.replace(/([A-Z])/g, ' $1').trim()} updated successfully.`);
+        showSuccessMessage(`${field.replace(/([A-Z])/g, ' $1').trim()} updated successfully.`);
       } else {
         await axiosInstance.post(
           `${apiBaseUrl}/auth/${addEndpoints[field]}/`,
           { value }
         );
         setNewLift((prev) => ({ ...prev, [field]: value }));
-        toast.success(`${field.replace(/([A-Z])/g, ' $1').trim()} added successfully.`);
+        showSuccessMessage(`${field.replace(/([A-Z])/g, ' $1').trim()} added successfully.`);
       }
 
       fetchOptions(field);
@@ -210,12 +251,12 @@ const LiftForm = ({
     } catch (error) {
       console.error(`Error ${isEditing ? 'editing' : 'adding'} ${field}:`, error);
       if (error.response?.status === 401) {
-        toast.error('Session expired. Please log in again.');
+        showErrorMessage('Session expired. Please log in again.');
         localStorage.removeItem('access_token');
         window.location.href = '/login';
       } else {
         const errorMsg = error.response?.data?.value?.[0] || error.response?.data?.error || `Failed to ${isEditing ? 'update' : 'add'} ${field.replace(/([A-Z])/g, ' $1').toLowerCase().trim()}.`;
-        toast.error(errorMsg);
+        showErrorMessage(errorMsg);
       }
     }
   };
@@ -242,16 +283,16 @@ const LiftForm = ({
         cabin: 'delete-cabin',
       };
       await axiosInstance.delete(`${apiBaseUrl}/auth/${deleteEndpoints[field]}/${id}/`);
-      toast.success(`${field.replace(/([A-Z])/g, ' $1').trim()} deleted successfully.`);
+      showSuccessMessage(`${field.replace(/([A-Z])/g, ' $1').trim()} deleted successfully.`);
       fetchOptions(field);
     } catch (error) {
       console.error(`Error deleting ${field}:`, error);
       if (error.response?.status === 401) {
-        toast.error('Session expired. Please log in again.');
+        showErrorMessage('Session expired. Please log in again.');
         localStorage.removeItem('access_token');
         window.location.href = '/login';
       } else {
-        toast.error(
+        showErrorMessage(
           error.response?.data?.error ||
           `Failed to delete ${field.replace(/([A-Z])/g, ' $1').toLowerCase().trim()}.`
         );
@@ -265,7 +306,7 @@ const LiftForm = ({
     const isValid = requiredFields.every((field) => newLift[field]);
     
     if (!isValid) {
-      toast.error('Please fill in all required fields.');
+      showErrorMessage('Please fill in all required fields.');
       return;
     }
 
@@ -313,6 +354,10 @@ const LiftForm = ({
         door_brand: doorBrands.data.find(d => d.value === newLift.doorBrand)?.id || null,
         controller_brand: controllerBrands.data.find(c => c.value === newLift.controllerBrand)?.id || null,
         cabin: cabins.data.find(c => c.value === newLift.cabin)?.id,
+        block_wing: newLift.blockWing || '',
+        license: newLift.license || '',
+        license_start_date: newLift.licenseStartDate || null,
+        license_expiry_date: newLift.licenseExpiryDate || null,
       };
 
       // Make API call based on edit or create mode
@@ -321,13 +366,13 @@ const LiftForm = ({
           `${apiBaseUrl}/auth/edit_lift/${initialData.id}/`, 
           liftData
         );
-        toast.success('Lift updated successfully.');
+        showSuccessMessage('Lift updated successfully.');
       } else {
         await axiosInstance.post(
           `${apiBaseUrl}/auth/add_lift/`, 
           liftData
         );
-        toast.success('Lift created successfully.');
+        showSuccessMessage('Lift created successfully.');
       }
 
       // Notify parent component of successful submission
@@ -336,11 +381,11 @@ const LiftForm = ({
     } catch (error) {
       console.error(`Error ${isEdit ? 'editing' : 'creating'} lift:`, error);
       if (error.response?.status === 401) {
-        toast.error('Session expired. Please log in again.');
+        showErrorMessage('Session expired. Please log in again.');
         localStorage.removeItem('access_token');
         window.location.href = '/login';
       } else {
-        toast.error(
+        showErrorMessage(
           error.response?.data?.error || 
           `Failed to ${isEdit ? 'update' : 'create'} lift.`
         );
@@ -349,7 +394,28 @@ const LiftForm = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      {/* Fixed positioned messages in right bottom corner */}
+      {alertMessage.show && (
+        <div className="fixed bottom-4 right-4 z-[60] max-w-sm animate-in slide-in-from-right-2 duration-300">
+          {alertMessage.type === 'success' ? (
+            <SuccessToast 
+              message={alertMessage.message} 
+              description={alertMessage.description}
+              autoClose={3000}
+              onClose={() => setAlertMessage(prev => ({ ...prev, show: false }))}
+            />
+          ) : (
+            <ErrorToast 
+              message={alertMessage.message} 
+              description={alertMessage.description}
+              autoClose={5000}
+              onClose={() => setAlertMessage(prev => ({ ...prev, show: false }))}
+            />
+          )}
+        </div>
+      )}
+      
       {/* Main Form Modal */}
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl overflow-hidden">
         {/* Modal Header */}
@@ -365,7 +431,72 @@ const LiftForm = ({
         {/* Modal Body */}
         <div className="p-6 max-h-[70vh] overflow-y-auto">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Left Column - Essential Information */}
+            {/* Left Column - Block/Wing & License Information */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-gray-800 border-b pb-2">
+                Block/Wing & License Information
+              </h3>
+
+              {/* Block/Wing */}
+              <div className="form-group">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Block/Wing
+                </label>
+                <input
+                  type="text"
+                  name="blockWing"
+                  value={newLift.blockWing}
+                  onChange={handleInputChange}
+                  className="block w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200"
+                  placeholder="Enter Block/Wing"
+                />
+              </div>
+
+              {/* License */}
+              <div className="form-group">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  License Number
+                </label>
+                <input
+                  type="text"
+                  name="license"
+                  value={newLift.license}
+                  onChange={handleInputChange}
+                  className="block w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200"
+                  placeholder="Enter License Number"
+                />
+              </div>
+
+              {/* License Start Date */}
+              <div className="form-group">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  License Start Date
+                </label>
+                <input
+                  type="date"
+                  name="licenseStartDate"
+                  value={newLift.licenseStartDate}
+                  onChange={handleInputChange}
+                  className="block w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200"
+                />
+              </div>
+
+              {/* License Expiry Date */}
+              <div className="form-group">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  License Expiry Date
+                </label>
+                <input
+                  type="date"
+                  name="licenseExpiryDate"
+                  value={newLift.licenseExpiryDate}
+                  onChange={handleInputChange}
+                  className="block w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200"
+                />
+              </div>
+            </div>
+
+            {/* Right Column - Essential Information */}
             <div className="space-y-4">
               <h3 className="text-lg font-semibold text-gray-800 border-b pb-2">
                 Essential Information
@@ -614,6 +745,16 @@ const LiftForm = ({
                   </button>
                 </div>
               </div>
+                </div>
+              </div>
+
+          {/* Second Row - Additional Technical Specifications */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+            {/* Left Column - Door & Controller Specifications */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-gray-800 border-b pb-2">
+                Door & Controller Specifications
+              </h3>
 
               {/* Door Type */}
               <div className="form-group">
@@ -700,7 +841,14 @@ const LiftForm = ({
                     +
                   </button>
                 </div>
+                </div>
               </div>
+
+            {/* Right Column - Cabin & Pricing */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-gray-800 border-b pb-2">
+                Cabin & Pricing
+              </h3>
 
               {/* Cabin */}
               <div className="form-group">
@@ -751,6 +899,7 @@ const LiftForm = ({
                   />
                 </div>
               </div>
+
             </div>
           </div>
         </div>

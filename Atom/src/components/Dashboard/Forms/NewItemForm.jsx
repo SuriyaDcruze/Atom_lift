@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { toast } from 'react-toastify';
 import { Edit, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import ErrorToast from '../messages/ErrorToast';
+import SuccessToast from '../messages/SuccessToast';
 
 const apiBaseUrl = import.meta.env.VITE_BASE_API;
 
@@ -41,6 +42,12 @@ const NewItemForm = ({ onCancel, onSubmit, item = null, isEditing = false }) => 
     type: true,
     unit: true,
   });
+  const [alertMessage, setAlertMessage] = useState({
+    show: false,
+    type: '', // 'success' or 'error'
+    message: '',
+    description: ''
+  });
 
   // Helper function to get dropdown value
   const getDropdownValue = (field, id) => {
@@ -49,10 +56,39 @@ const NewItemForm = ({ onCancel, onSubmit, item = null, isEditing = false }) => 
     return option ? option.value : '';
   };
 
+  // Helper functions for showing alert messages
+  const showSuccessMessage = (message, description = '', autoHide = true) => {
+    setAlertMessage({
+      show: true,
+      type: 'success',
+      message,
+      description
+    });
+    // Auto-hide after 3 seconds only if autoHide is true
+    if (autoHide) {
+      setTimeout(() => {
+        setAlertMessage(prev => ({ ...prev, show: false }));
+      }, 3000);
+    }
+  };
+
+  const showErrorMessage = (message, description = '') => {
+    setAlertMessage({
+      show: true,
+      type: 'error',
+      message,
+      description
+    });
+    // Auto-hide after 5 seconds for errors
+    setTimeout(() => {
+      setAlertMessage(prev => ({ ...prev, show: false }));
+    }, 5000);
+  };
+
   const createAxiosInstance = () => {
     const token = localStorage.getItem('access_token');
     if (!token) {
-      toast.error('Please log in to continue.');
+      showErrorMessage('Please log in to continue.');
       window.location.href = '/login';
       return null;
     }
@@ -81,13 +117,13 @@ const NewItemForm = ({ onCancel, onSubmit, item = null, isEditing = false }) => 
     } catch (error) {
       console.error(`Error fetching ${field}:`, error);
       if (error.response?.status === 401) {
-        toast.error('Session expired. Please log in again.');
+        showErrorMessage('Session expired. Please log in again.');
         localStorage.removeItem('access_token');
         window.location.href = '/login';
       } else if (retryCount > 0 && error.code === 'ERR_NETWORK') {
         setTimeout(() => fetchOptions(field, retryCount - 1), 2000);
       } else {
-        toast.error(`Failed to fetch ${field.replace(/([A-Z])/g, ' $1').toLowerCase().trim()}.`);
+        showErrorMessage(`Failed to fetch ${field.replace(/([A-Z])/g, ' $1').toLowerCase().trim()}.`);
         setOptionsLoading((prev) => ({ ...prev, [field]: false }));
       }
     }
@@ -153,7 +189,7 @@ const NewItemForm = ({ onCancel, onSubmit, item = null, isEditing = false }) => 
   const handleAddOption = async (field) => {
     const value = modalState[field].value.trim();
     if (!value) {
-      toast.error(`Please enter a ${field.replace(/([A-Z])/g, ' $1').toLowerCase().trim()}.`);
+      showErrorMessage(`Please enter a ${field.replace(/([A-Z])/g, ' $1').toLowerCase().trim()}.`);
       return;
     }
 
@@ -176,11 +212,11 @@ const NewItemForm = ({ onCancel, onSubmit, item = null, isEditing = false }) => 
 
       if (isEditing) {
         await axiosInstance.put(`${apiBaseUrl}/${apiEndpoints[field]}/${editId}/`, { value });
-        toast.success(`${field.replace(/([A-Z])/g, ' $1').trim()} updated successfully.`);
+        showSuccessMessage(`${field.replace(/([A-Z])/g, ' $1').trim()} updated successfully.`);
       } else {
         const response = await axiosInstance.post(`${apiBaseUrl}/${addEndpoints[field]}/`, { value });
         setFormData((prev) => ({ ...prev, [field]: response.data.id }));
-        toast.success(`${field.replace(/([A-Z])/g, ' $1').trim()} added successfully.`);
+        showSuccessMessage(`${field.replace(/([A-Z])/g, ' $1').trim()} added successfully.`);
       }
 
       fetchOptions(field);
@@ -188,11 +224,11 @@ const NewItemForm = ({ onCancel, onSubmit, item = null, isEditing = false }) => 
     } catch (error) {
       console.error(`Error ${isEditing ? 'editing' : 'adding'} ${field}:`, error);
       if (error.response?.status === 401) {
-        toast.error('Session expired. Please log in again.');
+        showErrorMessage('Session expired. Please log in again.');
         localStorage.removeItem('access_token');
         window.location.href = '/login';
       } else {
-        toast.error(error.response?.data?.value?.[0] || `Failed to ${isEditing ? 'update' : 'add'} ${field.replace(/([A-Z])/g, ' $1').toLowerCase().trim()}.`);
+        showErrorMessage(error.response?.data?.value?.[0] || `Failed to ${isEditing ? 'update' : 'add'} ${field.replace(/([A-Z])/g, ' $1').toLowerCase().trim()}.`);
       }
     }
   };
@@ -210,7 +246,7 @@ const NewItemForm = ({ onCancel, onSubmit, item = null, isEditing = false }) => 
         unit: 'auth/delete-unit',
       };
       await axiosInstance.delete(`${apiBaseUrl}/${deleteEndpoints[field]}/${id}/`);
-      toast.success(`${field.replace(/([A-Z])/g, ' $1').trim()} deleted successfully.`);
+      showSuccessMessage(`${field.replace(/([A-Z])/g, ' $1').trim()} deleted successfully.`);
       fetchOptions(field);
       if (formData[field] === id) {
         setFormData((prev) => ({ ...prev, [field]: null }));
@@ -218,11 +254,44 @@ const NewItemForm = ({ onCancel, onSubmit, item = null, isEditing = false }) => 
     } catch (error) {
       console.error(`Error deleting ${field}:`, error);
       if (error.response?.status === 401) {
-        toast.error('Session expired. Please log in again.');
+        showErrorMessage('Session expired. Please log in again.');
         localStorage.removeItem('access_token');
         window.location.href = '/login';
       } else {
-        toast.error(error.response?.data?.error || `Failed to delete ${field.replace(/([A-Z])/g, ' $1').toLowerCase().trim()}.`);
+        showErrorMessage(error.response?.data?.error || `Failed to delete ${field.replace(/([A-Z])/g, ' $1').toLowerCase().trim()}.`);
+      }
+    }
+  };
+
+  const handleDeleteItem = async () => {
+    if (!isEditing || !item?.id) return;
+    
+    const confirmMessage = `Are you sure you want to delete the item "${item.name}"? This action cannot be undone.`;
+    if (!window.confirm(confirmMessage)) return;
+
+    const axiosInstance = createAxiosInstance();
+    if (!axiosInstance) return;
+
+    try {
+      await axiosInstance.delete(`${apiBaseUrl}/auth/delete-item/${item.id}/`);
+      showSuccessMessage('Item deleted successfully.', 'The item has been permanently removed from the system.', false);
+      
+      // Wait for the success message to be visible before closing/navigating
+      setTimeout(() => {
+        if (onSubmit) {
+          onSubmit(null, 'deleted'); // Pass null to indicate deletion
+        } else {
+          navigate('/items');
+        }
+      }, 2000);
+    } catch (error) {
+      console.error('Error deleting item:', error);
+      if (error.response?.status === 401) {
+        showErrorMessage('Session expired. Please log in again.');
+        localStorage.removeItem('access_token');
+        window.location.href = '/login';
+      } else {
+        showErrorMessage(error.response?.data?.error || 'Failed to delete item.');
       }
     }
   };
@@ -270,32 +339,35 @@ const NewItemForm = ({ onCancel, onSubmit, item = null, isEditing = false }) => 
       let response;
       if (isEditing) {
         response = await axiosInstance.put(`${apiBaseUrl}/auth/edit-item/${item.id}/`, itemData);
-        toast.success(response.data.message || 'Item updated successfully.');
+        showSuccessMessage(response.data.message || 'Item updated successfully.', '', false);
       } else {
         response = await axiosInstance.post(`${apiBaseUrl}/auth/add-item/`, itemData);
-        toast.success(response.data.message || 'Item created successfully.');
+        showSuccessMessage(response.data.message || 'Item created successfully.', '', false);
       }
 
-      if (onSubmit) {
-        onSubmit({
-          ...itemData,
-          id: isEditing ? item.id : response.data.item_id,
-          item_number: isEditing ? item.item_number : response.data.item_id ? `PART${1000 + response.data.item_id}` : item.item_number,
-          make_value: existingOptions.make.find((opt) => opt.id === itemData.make)?.value || null,
-          type_value: existingOptions.type.find((opt) => opt.id === itemData.type)?.value || null,
-          unit_value: existingOptions.unit.find((opt) => opt.id === itemData.unit)?.value || null,
-        });
-      } else {
-        navigate('/items');
-      }
+      // Wait for the success message to be visible before closing/navigating
+      setTimeout(() => {
+        if (onSubmit) {
+          onSubmit({
+            ...itemData,
+            id: isEditing ? item.id : response.data.item_id,
+            item_number: isEditing ? item.item_number : response.data.item_id ? `PART${1000 + response.data.item_id}` : item.item_number,
+            make_value: existingOptions.make.find((opt) => opt.id === itemData.make)?.value || null,
+            type_value: existingOptions.type.find((opt) => opt.id === itemData.type)?.value || null,
+            unit_value: existingOptions.unit.find((opt) => opt.id === itemData.unit)?.value || null,
+          });
+        } else {
+          navigate('/items');
+        }
+      }, 2000); // Wait 2 seconds to show the success message
     } catch (error) {
       console.error(`Error ${isEditing ? 'updating' : 'creating'} item:`, error.response?.data || error);
       if (error.response?.status === 401) {
-        toast.error('Session expired. Please log in again.');
+        showErrorMessage('Session expired. Please log in again.');
         localStorage.removeItem('access_token');
         window.location.href = '/login';
       } else {
-        toast.error(error.response?.data?.error || `Failed to ${isEditing ? 'update' : 'create'} item.`);
+        showErrorMessage(error.response?.data?.error || `Failed to ${isEditing ? 'update' : 'create'} item.`);
       }
     } finally {
       setLoading(false);
@@ -320,16 +392,39 @@ const NewItemForm = ({ onCancel, onSubmit, item = null, isEditing = false }) => 
       sacIgst: '',
     });
     setErrors({});
+    setAlertMessage({ show: false, type: '', message: '', description: '' });
     if (onCancel) onCancel();
   };
 
   return (
-    <div className="fixed inset-0  bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      {/* Fixed positioned messages in right bottom corner */}
+      {alertMessage.show && (
+        <div className="fixed bottom-4 right-4 z-[60] max-w-sm animate-in slide-in-from-right-2 duration-300">
+          {alertMessage.type === 'success' ? (
+            <SuccessToast 
+              message={alertMessage.message} 
+              description={alertMessage.description}
+              autoClose={3000}
+              onClose={() => setAlertMessage(prev => ({ ...prev, show: false }))}
+            />
+          ) : (
+            <ErrorToast 
+              message={alertMessage.message} 
+              description={alertMessage.description}
+              autoClose={5000}
+              onClose={() => setAlertMessage(prev => ({ ...prev, show: false }))}
+            />
+          )}
+        </div>
+      )}
+      
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl overflow-hidden">
         <div className="bg-gradient-to-r from-[#2D3A6B] to-[#243158] p-6">
           <h2 className="text-2xl font-bold text-white">{isEditing ? 'Edit Item' : 'Create New Item'}</h2>
           <p className="text-white">Fill in all required fields (*) to {isEditing ? 'update' : 'add'} an item</p>
         </div>
+        
         <div className="p-6 max-h-[70vh] overflow-y-auto">
           <div className="grid grid-cols-1 gap-6">
             <div className="space-y-4">
@@ -588,26 +683,40 @@ const NewItemForm = ({ onCancel, onSubmit, item = null, isEditing = false }) => 
             </div>
           </div>
         </div>
-        <div className="bg-gray-50 px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
-          <button
-            onClick={handleCancel}
-            className="px-6 py-2.5 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-100 transition-all duration-200"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleSubmit}
-            disabled={loading}
-            className="px-6 py-2.5 bg-gradient-to-r from-[#2D3A6B] to-[#243158] rounded-lg text-white font-medium hover:from-[#213066] hover:to-[#182755] transition-all duration-200 shadow-md"
-          >
-            {loading ? 'Saving...' : isEditing ? 'Update Item' : 'Create Item'}
-          </button>
+        <div className="bg-gray-50 px-6 py-4 border-t border-gray-200 flex justify-between">
+          <div>
+            {isEditing && (
+              <button
+                onClick={handleDeleteItem}
+                disabled={loading}
+                className="px-6 py-2.5 bg-red-600 hover:bg-red-700 disabled:bg-red-400 rounded-lg text-white font-medium transition-all duration-200 shadow-md flex items-center space-x-2"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span>Delete Item</span>
+              </button>
+            )}
+          </div>
+          <div className="flex space-x-3">
+            <button
+              onClick={handleCancel}
+              className="px-6 py-2.5 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-100 transition-all duration-200"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSubmit}
+              disabled={loading}
+              className="px-6 py-2.5 bg-gradient-to-r from-[#2D3A6B] to-[#243158] rounded-lg text-white font-medium hover:from-[#213066] hover:to-[#182755] transition-all duration-200 shadow-md"
+            >
+              {loading ? 'Saving...' : isEditing ? 'Update Item' : 'Create Item'}
+            </button>
+          </div>
         </div>
       </div>
 
       {Object.entries(modalState).map(([field, { isOpen, value, isEditing, editId }]) => (
         isOpen && (
-          <div key={field} className="fixed inset-0  bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div key={field} className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl p-6">
               <h3 className="text-lg font-semibold text-gray-800 mb-4">
                 {isEditing ? `Edit ${field.replace(/([A-Z])/g, ' $1').trim()}` : `Add New ${field.replace(/([A-Z])/g, ' $1').trim()}`}

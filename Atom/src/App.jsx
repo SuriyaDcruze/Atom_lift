@@ -21,6 +21,7 @@ import ThisMonthExpire from './components/Dashboard/ThisMonthExpire';
 import NextMonthExpire from './components/Dashboard/NextMonthExpire';
 import LastMonthExpire from './components/Dashboard/LastMonthExpire';
 import Customers from './components/Dashboard/Customers';
+import CustomerDetails from './components/Dashboard/CustomerDetails';
 import DeliveryChallan from './components/Dashboard/DeliveryChallan';
 import Quotation from './components/Dashboard/Quotation';
 import Orders from './components/Dashboard/Orders';
@@ -104,6 +105,7 @@ function App() {
           <Route path="/dashboard/next-month" element={<NextMonthExpire />} />
           <Route path="/dashboard/last-month" element={<LastMonthExpire />} />
           <Route path="/dashboard/customers" element={<Customers />} />
+          <Route path="/dashboard/customer/:customerId" element={<CustomerDetails />} />
           <Route path="/dashboard/delivery-challan" element={<DeliveryChallan />} />
           <Route path="/dashboard/quotation" element={<Quotation />} />
           <Route path="/dashboard/orders" element={<Orders />} />

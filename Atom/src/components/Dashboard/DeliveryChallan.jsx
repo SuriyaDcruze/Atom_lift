@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Trash2, Plus, Download, ChevronDown, ChevronUp } from 'lucide-react';
+import { Trash2, Plus, Download, ChevronDown, ChevronUp, X } from 'lucide-react';
 
 const DeliveryChallanRow = ({ 
   date, 
@@ -90,6 +90,19 @@ const DeliveryChallanRow = ({
 };
 
 const DeliveryChallan = () => {
+  const [showForm, setShowForm] = useState(false);
+  const [formData, setFormData] = useState({
+    date: new Date().toISOString().split('T')[0],
+    deliveryChallanNumber: '',
+    reference: '',
+    customerName: '',
+    status: 'Drafts',
+    invoiceStatus: 'Not Invoiced',
+    amount: '0.00',
+    items: [],
+    notes: ''
+  });
+
   const customers = [
     {
       date: '27.11.2024',
@@ -102,6 +115,48 @@ const DeliveryChallan = () => {
     },
   ];
 
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    console.log('Delivery Challan Form Submitted:', formData);
+    // TODO: Add API call to save delivery challan
+    alert('Delivery Challan created successfully!');
+    setShowForm(false);
+    setFormData({
+      date: new Date().toISOString().split('T')[0],
+      deliveryChallanNumber: '',
+      reference: '',
+      customerName: '',
+      status: 'Drafts',
+      invoiceStatus: 'Not Invoiced',
+      amount: '0.00',
+      items: [],
+      notes: ''
+    });
+  };
+
+  const handleCloseForm = () => {
+    setShowForm(false);
+    setFormData({
+      date: new Date().toISOString().split('T')[0],
+      deliveryChallanNumber: '',
+      reference: '',
+      customerName: '',
+      status: 'Drafts',
+      invoiceStatus: 'Not Invoiced',
+      amount: '0.00',
+      items: [],
+      notes: ''
+    });
+  };
+
   return (
     <div className="p-4 sm:p-6 bg-gray-100 min-h-screen">
       {/* Header with actions */}
@@ -111,7 +166,13 @@ const DeliveryChallan = () => {
           <button className="bg-gray-200 text-gray-700 px-3 py-2 sm:px-4 sm:py-2 rounded-lg shadow-md hover:bg-gray-300 transition-colors flex items-center justify-center text-sm sm:text-base">
             <Download size={16} className="mr-2" /> Export
           </button>
-          <button className="bg-[#243158] text-white px-3 py-2 sm:px-4 sm:py-2 rounded-lg shadow-md  transition-colors flex items-center justify-center text-sm sm:text-base">
+          <button 
+            onClick={() => {
+              console.log('Create Delivery Challan button clicked');
+              setShowForm(true);
+            }}
+            className="bg-[#243158] text-white px-3 py-2 sm:px-4 sm:py-2 rounded-lg shadow-md hover:bg-[#1a2540] transition-colors flex items-center justify-center text-sm sm:text-base"
+          >
             <Plus size={16} className="mr-2" /> Create Delivery Challan
           </button>
         </div>
@@ -158,6 +219,181 @@ const DeliveryChallan = () => {
           </div>
         </div>
       </div>
+
+      {/* Delivery Challan Form Modal */}
+      {showForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <div className="bg-gradient-to-r from-[#2D3A6B] to-[#243158] px-6 py-4 flex justify-between items-center">
+              <h2 className="text-xl font-semibold text-white">Create Delivery Challan</h2>
+              <button 
+                onClick={handleCloseForm}
+                className="text-white hover:text-gray-200 transition-colors"
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmit} className="p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Basic Information */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-medium text-gray-900 border-b pb-2">
+                    Basic Information
+                  </h3>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Date <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="date"
+                      name="date"
+                      value={formData.date}
+                      onChange={handleInputChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2D3A6B] focus:border-[#2D3A6B]"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Delivery Challan Number <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      name="deliveryChallanNumber"
+                      value={formData.deliveryChallanNumber}
+                      onChange={handleInputChange}
+                      placeholder="Enter challan number"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2D3A6B] focus:border-[#2D3A6B]"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Reference <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      name="reference"
+                      value={formData.reference}
+                      onChange={handleInputChange}
+                      placeholder="Enter reference"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2D3A6B] focus:border-[#2D3A6B]"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Customer Name <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      name="customerName"
+                      value={formData.customerName}
+                      onChange={handleInputChange}
+                      placeholder="Enter customer name"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2D3A6B] focus:border-[#2D3A6B]"
+                      required
+                    />
+                  </div>
+                </div>
+
+                {/* Status and Amount */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-medium text-gray-900 border-b pb-2">
+                    Status & Amount
+                  </h3>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Status
+                    </label>
+                    <select
+                      name="status"
+                      value={formData.status}
+                      onChange={handleInputChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2D3A6B] focus:border-[#2D3A6B]"
+                    >
+                      <option value="Drafts">Drafts</option>
+                      <option value="Sent">Sent</option>
+                      <option value="Delivered">Delivered</option>
+                      <option value="Completed">Completed</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Invoice Status
+                    </label>
+                    <select
+                      name="invoiceStatus"
+                      value={formData.invoiceStatus}
+                      onChange={handleInputChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2D3A6B] focus:border-[#2D3A6B]"
+                    >
+                      <option value="Not Invoiced">Not Invoiced</option>
+                      <option value="Invoiced">Invoiced</option>
+                      <option value="Partially Invoiced">Partially Invoiced</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Amount (INR)
+                    </label>
+                    <input
+                      type="number"
+                      name="amount"
+                      value={formData.amount}
+                      onChange={handleInputChange}
+                      placeholder="0.00"
+                      step="0.01"
+                      min="0"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2D3A6B] focus:border-[#2D3A6B]"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Notes */}
+              <div className="mt-6">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Notes
+                </label>
+                <textarea
+                  name="notes"
+                  value={formData.notes}
+                  onChange={handleInputChange}
+                  rows={4}
+                  placeholder="Enter any additional notes..."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2D3A6B] focus:border-[#2D3A6B]"
+                />
+              </div>
+
+              {/* Form Actions */}
+              <div className="flex justify-end space-x-3 mt-6 pt-6 border-t">
+                <button
+                  type="button"
+                  onClick={handleCloseForm}
+                  className="px-4 py-2 text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-6 py-2 bg-[#243158] text-white rounded-lg hover:bg-[#1a2540] transition-colors"
+                >
+                  Create Delivery Challan
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

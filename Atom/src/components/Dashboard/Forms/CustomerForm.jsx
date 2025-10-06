@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { toast } from 'react-toastify';
 import { Edit, Trash2 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom'; // NEW: Import useNavigate
-import SuccessToast from '../../Dashboard/messages/SuccessToast'; // NEW: Import SuccessToast
+import { useNavigate } from 'react-router-dom';
+import ErrorToast from '../messages/ErrorToast';
+import SuccessToast from '../messages/SuccessToast';
 
 const CustomerForm = ({
   isEdit = false,
@@ -18,7 +18,6 @@ const CustomerForm = ({
     siteId: '',
     jobNo: '',
     siteName: '',
-    liftCode: '',
     siteAddress: '',
     email: '',
     phone: '',
@@ -28,7 +27,6 @@ const CustomerForm = ({
     contactPersonName: '',
     designation: '',
     pinCode: '',
-    country: '',
     state: '',
     city: '',
     sector: '',
@@ -49,7 +47,6 @@ const CustomerForm = ({
       { id: 1, value: 'government', label: 'Government' },
       { id: 2, value: 'private', label: 'Private' },
     ],
-    liftCodes: [],
   });
 
   const [optionsLoaded, setOptionsLoaded] = useState(false);
@@ -67,13 +64,37 @@ const CustomerForm = ({
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [lastSubmitTime, setLastSubmitTime] = useState(0);
-  const [selectedLiftCode, setSelectedLiftCode] = useState('');
+
+  const [alertMessage, setAlertMessage] = useState({
+    show: false,
+    type: '', // 'success' or 'error'
+    message: '',
+    description: ''
+  });
+
+  const showSuccessMessage = (message, description = '') => {
+    setAlertMessage({
+      show: true,
+      type: 'success',
+      message,
+      description
+    });
+  };
+
+  const showErrorMessage = (message, description = '') => {
+    setAlertMessage({
+      show: true,
+      type: 'error',
+      message,
+      description
+    });
+  };
 
   const createAxiosInstance = () => {
     const token = localStorage.getItem('access_token');
     if (!token) {
       console.error('No access token found in localStorage');
-      toast.error('Please log in to continue.');
+      showErrorMessage('Please log in to continue.');
       window.location.href = '/login';
       return null;
     }
@@ -91,27 +112,17 @@ const CustomerForm = ({
         state: '/sales/province-states',
         routes: '/sales/routes',
         branch: '/sales/branches',
-        liftCodes: '/auth/lift_list/',
       };
       const endpoint = endpoints[field];
       const response = await axiosInstance.get(`${apiBaseUrl}${endpoint}`);
       console.log(`Fetched ${field} options:`, response.data);
 
       let normalizedData;
-      if (field === 'liftCodes') {
-        normalizedData = response.data.map((item) => ({
-          id: item.id,
-          value: item.lift_code,
-          label: item.lift_code,
-          ...item,
-        }));
-      } else {
-        normalizedData = response.data.map((item) => ({
-          id: item.id || item,
-          value: item.value || item,
-          label: item.value || item,
-        }));
-      }
+      normalizedData = response.data.map((item) => ({
+        id: item.id || item,
+        value: item.value || item,
+        label: item.value || item,
+      }));
 
       setExistingOptions((prev) => ({
         ...prev,
@@ -128,14 +139,14 @@ const CustomerForm = ({
     } catch (error) {
       console.error(`Error fetching ${field}:`, error);
       if (error.response?.status === 401) {
-        toast.error('Session expired. Please log in again.');
+        showErrorMessage('Session expired. Please log in again.');
         localStorage.removeItem('access_token');
         window.location.href = '/login';
       } else if (retryCount > 0 && error.code === 'ERR_NETWORK') {
         console.log(`Retrying fetchOptions for ${field}... (${retryCount} attempts left)`);
         setTimeout(() => fetchOptions(field, retryCount - 1), 2000);
       } else {
-        toast.error(`Failed to fetch ${field.replace(/([A-Z])/g, ' $1').toLowerCase().trim()} options.`);
+        showErrorMessage(`Failed to fetch ${field.replace(/([A-Z])/g, ' $1').toLowerCase().trim()} options.`);
         setExistingOptions((prev) => ({ ...prev, [field]: [] }));
       }
     }
@@ -149,34 +160,43 @@ const CustomerForm = ({
       routes: 'routes',
       branch: 'branch',
       sector: 'sector',
-      liftCode: 'liftCode',
     };
 
-    ['state', 'routes', 'branch', 'sector', 'liftCode'].forEach((field) => {
+    ['state', 'routes', 'branch', 'sector'].forEach((field) => {
       const idKey = fieldIdMap[field];
       if (data[idKey] && options[field]) {
-        const option = options[field].find((opt) => opt.id === data[idKey] || opt.value === data[idKey] || opt.lift_code === data[idKey]);
-        transformed[field] = option ? (option.label || option.value || option.lift_code) : '';
+        const option = options[field].find((opt) => opt.id === data[idKey] || opt.value === data[idKey]);
+        transformed[field] = option ? (option.label || option.value) : '';
       } else {
         transformed[field] = data[field] || data[idKey] || '';
       }
     });
+
+    // Handle siteName and jobNo
+    transformed.siteName = data.site_name || '';
+    transformed.jobNo = data.job_no || '';
+    if (transformed.siteName.includes(' - ')) {
+      const parts = transformed.siteName.split(' - ');
+      transformed.siteName = parts.slice(0, -1).join(' - ') + ' - ' + parts[parts.length - 1];
+      if (!transformed.jobNo) transformed.jobNo = parts[parts.length - 1];
+    } else if (transformed.jobNo) {
+      transformed.siteName += ` - ${transformed.jobNo}`;
+    }
 
     console.log('Transformed initialData:', transformed);
     return transformed;
   };
 
   useEffect(() => {
-    const fields = ['state', 'routes', 'branch', 'liftCodes'];
+    const fields = ['state', 'routes', 'branch'];
     Promise.all(fields.map((field) => fetchOptions(field)))
       .then(() => {
         if (isEdit && Object.keys(initialData).length > 0) {
           const transformedData = transformInitialData(initialData, existingOptions);
           setFormData((prev) => ({ ...prev, ...transformedData }));
-          setSelectedLiftCode(transformedData.liftCode || '');
         }
         setOptionsLoaded(true);
-        console.log('Options loaded, existingOptions.liftCodes:', existingOptions.liftCodes);
+        console.log('Options loaded');
       })
       .catch((error) => {
         console.error('Error fetching all options:', error);
@@ -186,7 +206,6 @@ const CustomerForm = ({
           state: [],
           routes: [],
           branch: [],
-          liftCodes: [],
         }));
       });
   }, [initialData, apiBaseUrl]);
@@ -199,7 +218,7 @@ const CustomerForm = ({
           if (!isValid) {
             console.warn(`Invalid ${field} selected: ${formData[field]}. Resetting to empty.`);
             setFormData((prev) => ({ ...prev, [field]: '' }));
-            toast.warn(`Selected ${field} is invalid. Please choose a valid ${field} from the dropdown.`);
+            showErrorMessage(`Selected ${field} is invalid. Please choose a valid ${field} from the dropdown.`);
           }
         }
       });
@@ -221,8 +240,21 @@ const CustomerForm = ({
         ...prev,
         [name]: type === 'checkbox' ? checked : value,
       };
-      if (name === 'siteName' && selectedLiftCode && value && !value.includes(` - ${selectedLiftCode}`)) {
-        updatedData.siteName = `${value} - ${selectedLiftCode}`;
+      
+      // Validate phone and mobile fields to only allow 10 digits
+      if (name === 'phone' || name === 'mobile') {
+        // Remove any non-digit characters
+        const digitsOnly = value.replace(/\D/g, '');
+        // Limit to 10 digits
+        updatedData[name] = digitsOnly.slice(0, 10);
+      }
+      
+      if (name === 'siteName' && formData.jobNo && value && !value.includes(` - ${formData.jobNo}`)) {
+        updatedData.siteName = `${value} - ${formData.jobNo}`;
+      }
+      if (name === 'jobNo' && formData.siteName) {
+        const baseSiteName = formData.siteName.split(' - ')[0];
+        updatedData.siteName = `${baseSiteName} - ${value}`;
       }
       if (name === 'sameAsSiteAddress' && checked) {
         updatedData.officeAddress = prev.siteAddress;
@@ -231,21 +263,7 @@ const CustomerForm = ({
     });
   };
 
-  const handleSelectChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-    if (name === 'liftCode') {
-      setSelectedLiftCode(value);
-      setFormData((prev) => ({
-        ...prev,
-        siteName: prev.siteName ? `${prev.siteName.split(' - ')[0]} - ${value}` : ` - ${value}`,
-        liftCode: value,
-      }));
-    }
-  };
+
 
   const openAddModal = (field, isEditing = false, editId = null, editValue = '') => {
     setModalState((prev) => ({
@@ -267,7 +285,7 @@ const CustomerForm = ({
 
     const value = modalState[field].value.trim();
     if (!value) {
-      toast.error(`Please enter a ${field.replace(/([A-Z])/g, ' $1').toLowerCase().trim()}.`);
+      showErrorMessage(`Please enter a ${field.replace(/([A-Z])/g, ' $1').toLowerCase().trim()}.`);
       return;
     }
 
@@ -312,7 +330,7 @@ const CustomerForm = ({
         if (formData[field] === oldValue) {
           setFormData((prev) => ({ ...prev, [field]: value }));
         }
-        toast.success(`${field.replace(/([A-Z])/g, ' $1').trim()} updated successfully.`);
+        showSuccessMessage(`${field.replace(/([A-Z])/g, ' $1').trim()} updated successfully.`);
       } else {
         const response = await axiosInstance.post(
           `${apiBaseUrl}/sales/${addEndpoints[field]}/`,
@@ -330,7 +348,7 @@ const CustomerForm = ({
           console.log(`Updated dropdownOptions.${field}Options after add:`, updatedOptions.map((o) => o.value));
         }
         setFormData((prev) => ({ ...prev, [field]: newOption.value }));
-        toast.success(`${field.replace(/([A-Z])/g, ' $1').trim()} added successfully.`);
+        showSuccessMessage(`${field.replace(/([A-Z])/g, ' $1').trim()} added successfully.`);
       }
 
       await fetchOptions(field);
@@ -338,7 +356,7 @@ const CustomerForm = ({
     } catch (error) {
       console.error(`Error ${isEditing ? 'editing' : 'adding'} ${field}:`, error);
       if (error.response?.status === 401) {
-        toast.error('Session expired. Please log in again.');
+        showErrorMessage('Session expired. Please log in again.');
         localStorage.removeItem('access_token');
         window.location.href = '/login';
       } else {
@@ -346,7 +364,7 @@ const CustomerForm = ({
           error.response?.data?.value?.[0] ||
           error.response?.data?.error ||
           `Failed to ${isEditing ? 'update' : 'add'} ${field.replace(/([A-Z])/g, ' $1').toLowerCase().trim()}.`;
-        toast.error(errorMsg);
+        showErrorMessage(errorMsg);
       }
     } finally {
       setAddingOptions((prev) => ({ ...prev, [field]: false }));
@@ -384,16 +402,16 @@ const CustomerForm = ({
       if (formData[field] === deletedValue) {
         setFormData((prev) => ({ ...prev, [field]: '' }));
       }
-      toast.success(`${field.replace(/([A-Z])/g, ' $1').trim()} deleted successfully.`);
+      showSuccessMessage(`${field.replace(/([A-Z])/g, ' $1').trim()} deleted successfully.`);
       await fetchOptions(field);
     } catch (error) {
       console.error(`Error deleting ${field}:`, error);
       if (error.response?.status === 401) {
-        toast.error('Session expired. Please log in again.');
+        showErrorMessage('Session expired. Please log in again.');
         localStorage.removeItem('access_token');
         window.location.href = '/login';
       } else {
-        toast.error(
+        showErrorMessage(
           error.response?.data?.error ||
           `Failed to delete ${field.replace(/([A-Z])/g, ' $1').toLowerCase().trim()}.`
         );
@@ -406,7 +424,6 @@ const CustomerForm = ({
       siteId: '',
       jobNo: '',
       siteName: '',
-      liftCode: '',
       siteAddress: '',
       email: '',
       phone: '',
@@ -416,7 +433,6 @@ const CustomerForm = ({
       contactPersonName: '',
       designation: '',
       pinCode: '',
-      country: '',
       state: formData.state, // Preserve dropdowns
       city: '',
       sector: '',
@@ -428,7 +444,6 @@ const CustomerForm = ({
       billingName: '',
       generateCustomerLicense: false,
     });
-    setSelectedLiftCode('');
   };
 
   const handleSubmit = async () => {
@@ -441,41 +456,38 @@ const CustomerForm = ({
     console.log('handleSubmit called, isEdit:', isEdit, 'formData:', formData);
 
     if (!formData.siteId) {
-      toast.error('Site ID is required.');
+      showErrorMessage('Site ID is required.');
       console.log('Validation failed: Site ID is empty');
       return;
     }
     if (!formData.siteName) {
-      toast.error('Site Name is required.');
+      showErrorMessage('Site Name is required.');
       console.log('Validation failed: Site Name is empty');
       return;
     }
-    if (!formData.state) {
-      toast.error('State is required. Please select a state or add a new one.');
-      console.log('Validation failed: State is empty, Available states:', existingOptions.state.map((s) => s.value));
+    if (!formData.mobile) {
+      showErrorMessage('Mobile number is required for SMS notifications.');
+      console.log('Validation failed: Mobile number is empty');
       return;
     }
-    if (!formData.routes) {
-      toast.error('Route is required. Please select a route or add a new one.');
-      console.log('Validation failed: Route is empty, Available routes:', existingOptions.routes.map((r) => r.value));
+    if (formData.mobile && formData.mobile.length !== 10) {
+      showErrorMessage('Mobile number must be exactly 10 digits.');
+      console.log('Validation failed: Mobile number is not 10 digits');
       return;
     }
-    if (!formData.branch) {
-      toast.error('Branch is required. Please select a branch or add a new one.');
-      console.log('Validation failed: Branch is empty, Available branches:', existingOptions.branch.map((b) => b.value));
+    if (formData.phone && formData.phone.length !== 10) {
+      showErrorMessage('Phone number must be exactly 10 digits.');
+      console.log('Validation failed: Phone number is not 10 digits');
       return;
     }
+    // State is now optional - no validation required
+    // Routes and branch are now optional - no validation required
 
+    // Sector is now optional - only validate if provided
     const validSectors = ['government', 'private'];
     if (formData.sector && !validSectors.includes(formData.sector)) {
-      toast.error('Please select a valid sector from the dropdown.');
+      showErrorMessage('Please select a valid sector from the dropdown.');
       console.log('Validation failed: Invalid sector value:', formData.sector);
-      return;
-    }
-
-    if (formData.generateCustomerLicense && !formData.liftCode) {
-      toast.error('Please select a Lift Code to generate customer license.');
-      console.log('Validation failed: Generate license checked but no lift code selected');
       return;
     }
 
@@ -491,31 +503,26 @@ const CustomerForm = ({
 
       const customerData = {
         site_id: formData.siteId,
-        job_no: formData.jobNo,
+        job_no: formData.jobNo || '',
         site_name: formData.siteName,
-        lift_code: formData.liftCode || null,
-        site_address: formData.siteAddress,
-        email: formData.email,
-        phone: formData.phone,
-        mobile: formData.mobile,
-        office_address: formData.officeAddress,
-        contact_person_name: formData.contactPersonName,
-        designation: formData.designation,
-        pin_code: formData.pinCode,
-        country: formData.country,
-        province_state: existingOptions.state.find((s) => s.value === formData.state)?.id || null,
-        city: formData.city,
+        site_address: formData.siteAddress || '',
+        email: formData.email || '',
+        phone: formData.phone || '',
+        mobile: formData.mobile || '',
+        office_address: formData.officeAddress || '',
+        contact_person_name: formData.contactPersonName || '',
+        designation: formData.designation || '',
+        pin_code: formData.pinCode || '',
+        province_state: formData.state ? (existingOptions.state.find((s) => s.value === formData.state)?.id || null) : null,
+        city: formData.city || '',
         sector: formData.sector || null,
-        routes: existingOptions.routes.find((r) => r.value === formData.routes)?.id || null,
-        branch: existingOptions.branch.find((b) => b.value === formData.branch)?.id || null,
-        gst_number: formData.gstNumber,
-        pan_number: formData.panNumber,
-        handover_date: formData.handoverDate,
-        billing_name: formData.billingName,
+        routes: formData.routes ? (existingOptions.routes.find((r) => r.value === formData.routes)?.id || null) : null,
+        branch: formData.branch ? (existingOptions.branch.find((b) => b.value === formData.branch)?.id || null) : null,
+        gst_number: formData.gstNumber || '',
+        pan_number: formData.panNumber || '',
+        handover_date: formData.handoverDate || null,
+        billing_name: formData.billingName || '',
         generate_customer_license: formData.generateCustomerLicense,
-        lifts: formData.liftCode
-          ? [existingOptions.liftCodes.find((lc) => lc.value === formData.liftCode)?.id]
-          : [],
       };
 
       let response;
@@ -525,14 +532,14 @@ const CustomerForm = ({
           `${apiBaseUrl}/sales/edit-customer/${initialData.id}/`,
           customerData
         );
-        toast(<SuccessToast message="Customer updated successfully." />, { autoClose: 3000 });
+        showSuccessMessage('Customer updated successfully.');
       } else {
         console.log('Calling POST /sales/add-customer/');
         response = await axiosInstance.post(
           `${apiBaseUrl}/sales/add-customer/`,
           customerData
         );
-        toast(<SuccessToast message="Customer created successfully." />, { autoClose: 3000 });
+        showSuccessMessage('Customer created successfully.');
 
         // NEW: Ask if user wants to create an AMC
         const createAMC = window.confirm('Do you want to create an AMC for this customer?');
@@ -540,27 +547,25 @@ const CustomerForm = ({
 
         if (createAMC) {
           // Navigate to /dashboard/amc with customer ID
+          console.log('Navigating to AMC form with customerId:', response.data.reference_id);
           navigate(`/dashboard/amc?customerId=${response.data.reference_id}`);
           await onSubmitSuccess(updatedCustomer);
-          await Promise.all(['state', 'routes', 'branch', 'liftCodes'].map((field) => fetchOptions(field)));
+          await Promise.all(['state', 'routes', 'branch'].map((field) => fetchOptions(field)));
           onClose();
         } else {
           // Reset form and stay on page
+          console.log('User chose not to create AMC, resetting form');
           await onSubmitSuccess(updatedCustomer);
-          await Promise.all(['state', 'routes', 'branch', 'liftCodes'].map((field) => fetchOptions(field)));
+          await Promise.all(['state', 'routes', 'branch'].map((field) => fetchOptions(field)));
           resetForm();
           // Do not call onClose to keep the modal open
         }
       }
 
-      if (formData.generateCustomerLicense && formData.liftCode) {
-        toast(<SuccessToast message="Customer license generated successfully!" />, { autoClose: 3000 });
-      }
-
     } catch (error) {
       console.error(`Error ${isEdit ? 'editing' : 'creating'} customer:`, error);
       if (error.response?.status === 401) {
-        toast.error('Session expired. Please log in again.');
+        showErrorMessage('Session expired. Please log in again.');
         localStorage.removeItem('access_token');
         window.location.href = '/login';
       } else {
@@ -570,7 +575,7 @@ const CustomerForm = ({
             .map(([field, errors]) => `${field}: ${errors.join(', ')}`)
             .join('; ') ||
           `Failed to ${isEdit ? 'update' : 'create'} customer.`;
-        toast.error(errorMsg);
+        showErrorMessage(errorMsg);
         console.log('Submission error details:', error.response?.data);
       }
     } finally {
@@ -613,8 +618,6 @@ const CustomerForm = ({
     const selectOptions =
       name === 'sector'
         ? existingOptions.sector
-        : name === 'liftCode'
-        ? existingOptions.liftCodes
         : (existingOptions[name] || []);
     console.log(`Rendering ${name} dropdown, selectOptions:`, selectOptions, `formData.${name}:`, formData[name], `optionsLoaded:`, optionsLoaded);
     return (
@@ -626,7 +629,7 @@ const CustomerForm = ({
           <select
             name={name}
             value={formData[name] || ''}
-            onChange={name === 'liftCode' ? handleSelectChange : handleInputChange}
+            onChange={handleInputChange}
             className="flex-1 px-4 py-2 rounded-l-lg border border-gray-300 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all appearance-none bg-white"
             disabled={addingOptions[name] || !optionsLoaded}
             required={required}
@@ -634,8 +637,8 @@ const CustomerForm = ({
             <option value="">{optionsLoaded ? `Select ${label}` : 'Loading...'}</option>
             {selectOptions.length > 0 ? (
               selectOptions.map((option, index) => {
-                const optionValue = typeof option === 'string' ? option : (name === 'liftCode' ? option.value : option.value);
-                const optionLabel = typeof option === 'string' ? option : (name === 'liftCode' ? option.label : option.label || option.value);
+                const optionValue = typeof option === 'string' ? option : option.value;
+                const optionLabel = typeof option === 'string' ? option : option.label || option.value;
                 return (
                   <option key={`${name}-${optionValue}-${index}`} value={optionValue}>
                     {optionLabel}
@@ -646,7 +649,7 @@ const CustomerForm = ({
               <option value="" disabled>No options available</option>
             )}
           </select>
-          {showAddButton && name !== 'sector' && name !== 'liftCode' && (
+          {showAddButton && name !== 'sector' && (
             <button
               type="button"
               onClick={() => openAddModal(name)}
@@ -682,6 +685,27 @@ const CustomerForm = ({
 
   return (
     <>
+      {/* Fixed positioned messages in right bottom corner */}
+      {alertMessage.show && (
+        <div className="fixed bottom-4 right-4 z-[60] max-w-sm animate-in slide-in-from-right-2 duration-300">
+          {alertMessage.type === 'success' ? (
+            <SuccessToast 
+              message={alertMessage.message} 
+              description={alertMessage.description}
+              autoClose={3000}
+              onClose={() => setAlertMessage(prev => ({ ...prev, show: false }))}
+            />
+          ) : (
+            <ErrorToast 
+              message={alertMessage.message} 
+              description={alertMessage.description}
+              autoClose={5000}
+              onClose={() => setAlertMessage(prev => ({ ...prev, show: false }))}
+            />
+          )}
+        </div>
+      )}
+      
       <div className="fixed inset-0 bg-opacity-50 flex items-center justify-center z-50 p-4">
         <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl overflow-hidden">
           <div className="bg-gradient-to-r from-[#2D3A6B] to-[#243158] p-6">
@@ -700,9 +724,8 @@ const CustomerForm = ({
                     Basic Information
                   </h3>
                   {renderInput('siteId', 'SITE ID', 'text', true)}
-                  {renderInput('jobNo', 'JOB NO')}
                   {renderInput('siteName', 'SITE NAME', 'text', true)}
-                  {renderSelectWithAdd('liftCode', 'LIFT CODE', false, false)}
+                  {renderInput('jobNo', 'JOB NO')}
                   {renderTextarea('siteAddress', 'SITE ADDRESS')}
                   {renderTextarea('officeAddress', 'OFFICE ADDRESS')}
                   {renderCheckbox('sameAsSiteAddress', 'Same as Site Address')}
@@ -715,14 +738,13 @@ const CustomerForm = ({
                   </h3>
                   {renderInput('email', 'EMAIL', 'email')}
                   {renderInput('phone', 'PHONE', 'tel')}
-                  {renderInput('mobile', 'MOBILE (SMS NOTIFICATION)', 'tel')}
+                  {renderInput('mobile', 'MOBILE (SMS NOTIFICATION)', 'tel', true)}
                   {renderInput('pinCode', 'PIN CODE')}
-                  {renderInput('country', 'COUNTRY')}
-                  {renderSelectWithAdd('state', 'STATE', true)}
+                  {renderSelectWithAdd('state', 'STATE', false)}
                   {renderInput('city', 'CITY')}
                   {renderSelectWithAdd('sector', 'SECTOR', false, false)}
-                  {renderSelectWithAdd('routes', 'ROUTE', true)}
-                  {renderSelectWithAdd('branch', 'BRANCH', true)}
+                  {renderSelectWithAdd('routes', 'ROUTE', false)}
+                  {renderSelectWithAdd('branch', 'BRANCH', false)}
                   {renderInput('gstNumber', 'GST NUMBER')}
                   {renderInput('panNumber', 'PAN NUMBER')}
                   {renderInput('handoverDate', 'HANDOVER DATE', 'date')}
