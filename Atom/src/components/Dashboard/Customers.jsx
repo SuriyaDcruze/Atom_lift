@@ -377,30 +377,8 @@ const Customers = () => {
   };
 
   const handleEditCustomer = (customer) => {
-    setEditData({
-      siteId: customer.site_id,
-      jobNo: customer.job_no || '',
-      siteName: customer.site_name || '',
-      siteAddress: customer.site_address || '',
-      email: customer.email || '',
-      phone: customer.phone || '',
-      mobile: customer.mobile || '',
-      officeAddress: customer.office_address || '',
-      contactPersonName: customer.contact_person_name || '',
-      designation: customer.designation || '',
-      pinCode: customer.pin_code || '',
-      country: customer.country || '',
-      state: customer.province_state || '',
-      city: customer.city || '',
-      sector: customer.sector || '',
-      routes: customer.routes || '',
-      branch: customer.branch || '',
-      gstNumber: customer.gst_number || '',
-      panNumber: customer.pan_number || '',
-      handoverDate: customer.handover_date || '',
-      billingName: customer.billing_name || '',
-      id: customer.id,
-    });
+    // Pass the full API customer object; the form will transform it
+    setEditData(customer);
     setShowForm(true);
   };
 

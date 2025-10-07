@@ -16,6 +16,7 @@ const CustomerDetails = () => {
   const [routineServices, setRoutineServices] = useState([]);
   const [complaints, setComplaints] = useState([]);
   const [feedbacks, setFeedbacks] = useState([]);
+  const [followUps, setFollowUps] = useState([]);
   const [amcs, setAmcs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
@@ -222,6 +223,28 @@ const CustomerDetails = () => {
     }
   };
 
+  const fetchCustomerFollowUps = async () => {
+    const axiosInstance = createAxiosInstance();
+    if (!axiosInstance) return;
+
+    try {
+      const response = await axiosInstance.get(`${apiBaseUrl}/followups/followup-list/`);
+      const allFollowUps = Array.isArray(response.data) ? response.data : (response.data?.results || []);
+      const customerFollowUps = allFollowUps.filter(fu => {
+        const fuCustomer = fu.customer || fu.customer_id;
+        return (
+          fuCustomer == customerId ||
+          fuCustomer === parseInt(customerId) ||
+          fuCustomer === customerId?.toString()
+        );
+      });
+      setFollowUps(customerFollowUps);
+    } catch (error) {
+      console.error('Error fetching follow ups:', error);
+      setFollowUps([]);
+    }
+  };
+
   const fetchCustomerAMCs = async () => {
     const axiosInstance = createAxiosInstance();
     if (!axiosInstance) return;
@@ -254,6 +277,7 @@ const CustomerDetails = () => {
       fetchCustomerRoutineServices();
       fetchCustomerComplaints();
       fetchCustomerFeedbacks();
+      fetchCustomerFollowUps();
       fetchCustomerAMCs();
     } else {
       console.error('No customerId provided');
@@ -601,6 +625,8 @@ const CustomerDetails = () => {
                 className="block w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 disabled:bg-gray-100"
               />
             </div>
+            
+            
           </div>
 
           {/* Attachment Section */}
@@ -1130,6 +1156,55 @@ const CustomerDetails = () => {
           <div className="text-center py-8">
             <p className="text-gray-500 text-lg">No Feedback</p>
             <p className="text-gray-400 text-sm mt-2">Click "ADD FEEDBACK" to add feedback for this customer</p>
+          </div>
+        )}
+      </div>
+
+      {/* Follow Ups Section */}
+      <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-semibold text-gray-800">FOLLOW UPS</h2>
+          <button
+            onClick={() => navigate(`/dashboard/follow-ups?customerId=${customerId}`)}
+            className="px-4 py-2 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 transition-colors"
+          >
+            ADD FOLLOW UP
+          </button>
+        </div>
+
+        {followUps.length > 0 ? (
+          <div className="overflow-x-auto">
+            <table className="min-w-full text-sm">
+              <thead>
+                <tr className="bg-gray-100 text-gray-700">
+                  <th className="text-left p-3">Follow Up ID</th>
+                  <th className="text-left p-3">Date</th>
+                  <th className="text-left p-3">Subject</th>
+                  <th className="text-left p-3">Next Action</th>
+                  <th className="text-left p-3">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {followUps.map((fu, idx) => (
+                  <tr key={fu.id || idx} className="border-t">
+                    <td className="p-3">{fu.followup_id || fu.reference_id || fu.id || '—'}</td>
+                    <td className="p-3">{fu.date || fu.created_date || (fu.created_at ? fu.created_at.slice(0,10) : '—')}</td>
+                    <td className="p-3">{fu.subject || fu.title || fu.description || '—'}</td>
+                    <td className="p-3">{fu.next_action || fu.nextAction || '—'}</td>
+                    <td className="p-3">
+                      <span className="px-2 py-1 rounded text-xs bg-gray-100 text-gray-700">
+                        {fu.status || 'N/A'}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="text-center py-8">
+            <p className="text-gray-500 text-lg">No Follow Ups</p>
+            <p className="text-gray-400 text-sm mt-2">Click "ADD FOLLOW UP" to create one</p>
           </div>
         )}
       </div>

@@ -109,19 +109,19 @@ const CustomerForm = ({
 
     try {
       const endpoints = {
-        state: '/sales/province-states',
-        routes: '/sales/routes',
-        branch: '/sales/branches',
+        state: '/sales/province-states/',
+        routes: '/sales/routes/',
+        branch: '/sales/branches/',
       };
       const endpoint = endpoints[field];
       const response = await axiosInstance.get(`${apiBaseUrl}${endpoint}`);
       console.log(`Fetched ${field} options:`, response.data);
 
       let normalizedData;
-      normalizedData = response.data.map((item) => ({
-        id: item.id || item,
-        value: item.value || item,
-        label: item.value || item,
+      normalizedData = (Array.isArray(response.data) ? response.data : []).map((item) => ({
+        id: item?.id ?? item,
+        value: item?.value ?? item?.name ?? item,
+        label: item?.label ?? item?.name ?? item?.value ?? item,
       }));
 
       setExistingOptions((prev) => ({
@@ -153,8 +153,28 @@ const CustomerForm = ({
   };
 
   const transformInitialData = (data, options) => {
-    const transformed = { ...data };
+    const transformed = {};
 
+    // Map simple fields
+    transformed.siteId = data.site_id || '';
+    transformed.siteName = data.site_name || '';
+    transformed.jobNo = data.job_no || '';
+    transformed.siteAddress = data.site_address || '';
+    transformed.officeAddress = data.office_address || '';
+    transformed.email = data.email || '';
+    transformed.phone = data.phone || data.phone_no || data.telephone || '';
+    transformed.mobile = data.mobile || data.mobile_no || data.mobile_number || data.mobile1 || '';
+    transformed.contactPersonName = data.contact_person_name || '';
+    transformed.designation = data.designation || '';
+    transformed.pinCode = data.pin_code || '';
+    transformed.city = data.city || '';
+    transformed.gstNumber = data.gst_number || '';
+    transformed.panNumber = data.pan_number || '';
+    transformed.handoverDate = data.handover_date || '';
+    transformed.billingName = data.billing_name || '';
+    transformed.generateCustomerLicense = !!data.generate_customer_license;
+
+    // Map select fields to their option values so selects render correctly
     const fieldIdMap = {
       state: 'province_state',
       routes: 'routes',
@@ -164,23 +184,32 @@ const CustomerForm = ({
 
     ['state', 'routes', 'branch', 'sector'].forEach((field) => {
       const idKey = fieldIdMap[field];
-      if (data[idKey] && options[field]) {
-        const option = options[field].find((opt) => opt.id === data[idKey] || opt.value === data[idKey]);
-        transformed[field] = option ? (option.label || option.value) : '';
+      // Prefer provided display values if available
+      const displayFallback =
+        data[`${field}_value`] ||
+        (field === 'state' ? (data.state_value || data.province_state_value) : undefined) ||
+        (field === 'routes' ? data.routes_value : undefined) ||
+        (field === 'branch' ? data.branch_value : undefined) ||
+        undefined;
+
+      const raw = displayFallback || data[field] || data[idKey] || '';
+      if (raw && Array.isArray(options[field]) && options[field].length > 0) {
+        const match = options[field].find(
+          (opt) => opt.id === raw || opt.value === raw || opt.label === raw
+        );
+        transformed[field] = match ? match.value : (typeof raw === 'string' ? raw : '');
       } else {
-        transformed[field] = data[field] || data[idKey] || '';
+        transformed[field] = typeof raw === 'string' ? raw : '';
       }
     });
 
-    // Handle siteName and jobNo
-    transformed.siteName = data.site_name || '';
-    transformed.jobNo = data.job_no || '';
+    // Keep existing behavior joining siteName and jobNo if applicable
     if (transformed.siteName.includes(' - ')) {
       const parts = transformed.siteName.split(' - ');
       transformed.siteName = parts.slice(0, -1).join(' - ') + ' - ' + parts[parts.length - 1];
       if (!transformed.jobNo) transformed.jobNo = parts[parts.length - 1];
     } else if (transformed.jobNo) {
-      transformed.siteName += ` - ${transformed.jobNo}`;
+      transformed.siteName = transformed.siteName ? `${transformed.siteName} - ${transformed.jobNo}` : transformed.siteName;
     }
 
     console.log('Transformed initialData:', transformed);
@@ -191,10 +220,6 @@ const CustomerForm = ({
     const fields = ['state', 'routes', 'branch'];
     Promise.all(fields.map((field) => fetchOptions(field)))
       .then(() => {
-        if (isEdit && Object.keys(initialData).length > 0) {
-          const transformedData = transformInitialData(initialData, existingOptions);
-          setFormData((prev) => ({ ...prev, ...transformedData }));
-        }
         setOptionsLoaded(true);
         console.log('Options loaded');
       })
@@ -209,6 +234,16 @@ const CustomerForm = ({
         }));
       });
   }, [initialData, apiBaseUrl]);
+
+  // After options are loaded, populate form from initialData for edit mode
+  const [prefilled, setPrefilled] = useState(false);
+  useEffect(() => {
+    if (!prefilled && isEdit && optionsLoaded && Object.keys(initialData || {}).length > 0) {
+      const transformedData = transformInitialData(initialData, existingOptions);
+      setFormData((prev) => ({ ...prev, ...transformedData }));
+      setPrefilled(true);
+    }
+  }, [prefilled, isEdit, optionsLoaded, initialData, existingOptions]);
 
   useEffect(() => {
     if (optionsLoaded) {
