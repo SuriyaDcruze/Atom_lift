@@ -16,7 +16,7 @@ const Complaints = () => {
     by: 'ALL',
     status: 'ALL',
   });
-  const [periodOptions] = useState(['ALL TIME', 'LAST_WEEK', 'LAST_MONTH']);
+  const [periodOptions] = useState(['ALL TIME', 'THIS MONTH', 'LAST_MONTH','THIS YEAR','LAST YEAR','LAST 3 MONTHS','LAST 6 MONTHS','LAST 12 MONTHS','CUSTOM']);
   const [customerOptions, setCustomerOptions] = useState([]);
   const [byOptions] = useState(['ALL', 'Customer', 'Admin']);
   const [statusOptions] = useState(['ALL', 'In Progress', 'Open', 'Closed']);
@@ -488,7 +488,7 @@ const Complaints = () => {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-2 mb-4 flex-wrap">
+      {/* <div className="flex gap-2 mb-4 flex-wrap">
         <button className="bg-[#243158] text-white rounded-md px-4 py-2 text-sm font-medium whitespace-nowrap">Complaints</button>
         <button className="bg-white border border-gray-300 text-gray-800 rounded-md px-4 py-2 text-sm font-medium whitespace-nowrap">
           Transaction History
@@ -496,7 +496,7 @@ const Complaints = () => {
         <button className="bg-white border border-gray-300 text-gray-800 rounded-md px-4 py-2 text-sm font-medium whitespace-nowrap">
           Check Transaction History
         </button>
-      </div>
+      </div> */}
 
       {/* Table container with horizontal scroll on small screens */}
       <div className="bg-white rounded-lg shadow-lg overflow-x-auto">

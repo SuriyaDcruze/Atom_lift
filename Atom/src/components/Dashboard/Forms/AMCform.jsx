@@ -257,6 +257,12 @@ const AMCForm = ({
           const formattedEndDate = endDate.toISOString().split('T')[0];
           updatedAMC.endDate = formattedEndDate;
         }
+
+        // Auto-fill equipment number from selected customer's job number
+        if (name === 'customer') {
+          const selectedCustomer = customers.find(c => c.site_name === value);
+          updatedAMC.equipmentNo = selectedCustomer?.job_no || '';
+        }
         
         return updatedAMC;
       });

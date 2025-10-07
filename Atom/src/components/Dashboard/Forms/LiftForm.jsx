@@ -166,8 +166,8 @@ const LiftForm = ({
     console.log('LiftForm - initialData received:', initialData);
     console.log('LiftForm - newLift state after initialData:', newLift);
     
-    // Ensure customer is set from initialData
-    if (initialData.customer && !newLift.customer) {
+    // Ensure customer is set from initialData (only if initialData exists and has customer)
+    if (initialData && initialData.customer && !newLift.customer) {
       console.log('LiftForm - Setting customer from initialData:', initialData.customer);
       setNewLift(prev => ({ ...prev, customer: initialData.customer }));
     }
@@ -378,13 +378,6 @@ const LiftForm = ({
 
       console.log('LiftForm - newLift state:', newLift);
       console.log('LiftForm - liftData being sent:', liftData);
-      
-      // Ensure customer is set
-      if (!liftData.customer) {
-        console.error('LiftForm - Customer not set! newLift.customer:', newLift.customer);
-        showErrorMessage('Customer not properly set. Please try again.');
-        return;
-      }
 
       // Make API call based on edit or create mode
       let response;
@@ -423,7 +416,14 @@ const LiftForm = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div 
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          onClose();
+        }
+      }}
+    >
       {/* Fixed positioned messages in right bottom corner */}
       {alertMessage.show && (
         <div className="fixed bottom-4 right-4 z-[60] max-w-sm animate-in slide-in-from-right-2 duration-300">
@@ -448,8 +448,17 @@ const LiftForm = ({
       {/* Main Form Modal */}
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl overflow-hidden">
         {/* Modal Header */}
-        <div className="bg-gradient-to-r from-[#2D3A6B] to-[#243158] p-6">
-          <h2 className="text-2xl font-bold text-white">
+        <div className="bg-gradient-to-r from-[#2D3A6B] to-[#243158] p-6 relative">
+          <button
+            onClick={onClose}
+            className="absolute top-4 right-4 text-white hover:text-gray-300 transition-colors"
+            title="Close"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+          <h2 className="text-2xl font-bold text-white pr-8">
             {isEdit ? 'Edit Lift' : 'Create New Lift'}
           </h2>
           <p className="text-white">
