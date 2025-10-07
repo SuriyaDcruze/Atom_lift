@@ -30,6 +30,7 @@ const AMCForm = ({
     startDate: '',
     endDate: '',
     equipmentNo: '',
+    latitude: '',
     notes: '',
     isGenerateContractNow: false,
     noOfServices: '',
@@ -414,6 +415,7 @@ const AMCForm = ({
       formData.append('start_date', newAMC.startDate);
       formData.append('end_date', newAMC.endDate);
       formData.append('equipment_no', newAMC.equipmentNo || '');
+      formData.append('latitude', newAMC.latitude || '');
       formData.append('notes', newAMC.notes || '');
       formData.append('is_generate_contract', newAMC.isGenerateContractNow);
       formData.append('no_of_services', newAMC.noOfServices || '12');
@@ -643,6 +645,20 @@ const AMCForm = ({
                   value={newAMC.equipmentNo}
                   onChange={handleInputChange}
                   className="block w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200"
+                />
+              </div>
+              <div className="form-group">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Latitude
+                </label>
+                <input
+                  type="number"
+                  name="latitude"
+                  value={newAMC.latitude}
+                  onChange={handleInputChange}
+                  step="any"
+                  className="block w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200"
+                  placeholder="Enter latitude coordinate"
                 />
               </div>
               <div className="form-group">
