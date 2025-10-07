@@ -369,6 +369,7 @@ const Complaints = () => {
                   id="bulk-actions-dropdown"
                   className="hidden origin-top-right absolute right-0 mt-2 w-28 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none z-10"
                 >
+                  
                   <button
                     onClick={handleBulkDelete}
                     disabled={selectedComplaints.length === 0}
@@ -379,6 +380,7 @@ const Complaints = () => {
                     }`}
                   >
                     Delete
+                    
                   </button>
                 </div>
               </div>

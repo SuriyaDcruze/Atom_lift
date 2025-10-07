@@ -730,7 +730,7 @@ const Customers = () => {
               console.log('Add New Customer button clicked');
               handleAddNewCustomer();
             }}
-            className="flex items-center bg-gradient-to-r from-[#2D3A6B] to-[#243158] text-white px-3 py-2 rounded-lg shadow-md hover:from-[#213066] hover:to-[#182755] transition-colors text-sm sm:text-base whitespace-nowrap"
+            className="flex items-center bg-gradient-to-r from-blue-600 to-blue-700 text-white px-3 py-2 rounded-lg shadow-md hover:from-blue-700 hover:to-blue-800 transition-colors text-sm sm:text-base whitespace-nowrap font-medium"
           >
             <Plus size={16} className="mr-1 sm:mr-2" />
             <span className="hidden sm:inline">Add New Customer</span>

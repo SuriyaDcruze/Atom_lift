@@ -24,7 +24,7 @@ import Customers from './components/Dashboard/Customers';
 import CustomerDetails from './components/Dashboard/CustomerDetails';
 import DeliveryChallan from './components/Dashboard/DeliveryChallan';
 import Quotation from './components/Dashboard/Quotation';
-import Orders from './components/Dashboard/Orders';
+// import Orders from './components/Dashboard/Orders';
 import Invoice from './components/Dashboard/Invoice';
 import PaymentRecieved from './components/Dashboard/PaymentReceived';
 import RecurringInvoices from './components/Dashboard/RecurringInvoices';
@@ -108,7 +108,7 @@ function App() {
           <Route path="/dashboard/customer/:customerId" element={<CustomerDetails />} />
           <Route path="/dashboard/delivery-challan" element={<DeliveryChallan />} />
           <Route path="/dashboard/quotation" element={<Quotation />} />
-          <Route path="/dashboard/orders" element={<Orders />} />
+          {/* <Route path="/dashboard/orders" element={<Orders />} /> */}
           <Route path="/dashboard/invoice" element={<Invoice />} />
           <Route path="/dashboard/payment-received" element={<PaymentRecieved />} />
           <Route path="/dashboard/recurring-invoices" element={<RecurringInvoices />} />

@@ -66,12 +66,11 @@ const PendingAssignServices = () => {
               <select
                 value={selectedStatus}
                 onChange={(e) => setSelectedStatus(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm"
+                className="w-full px-4 h-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm"
               >
                 <option value="DUE">Pending Assign</option>
                 <option value="OVERDUE">Overdue</option>
               </select>
-              <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
             </div>
             <div className="relative">
               <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center">
@@ -81,7 +80,7 @@ const PendingAssignServices = () => {
               <select
                 value={selectedEmployee}
                 onChange={(e) => setSelectedEmployee(e.target.value)}
-                className="w-full border border-gray-300 rounded-md p-2 text-sm"
+                className="w-full border border-gray-300 rounded-md h-10 px-4 text-sm"
               >
                 <option>ALL</option>
                 <option>Employee 1</option>
@@ -89,15 +88,18 @@ const PendingAssignServices = () => {
                 <option>Employee 3</option>
               </select>
             </div>
-            <div className="relative md:col-span-2">
-              <input
-                type="text"
-                placeholder="Search pending services..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm"
-              />
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1 invisible">Search</label>
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Search pending services..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 h-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm"
+                />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              </div>
             </div>
           </div>
         </div>

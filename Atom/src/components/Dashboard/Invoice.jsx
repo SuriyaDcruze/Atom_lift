@@ -5,6 +5,8 @@ import { Search, Printer, Trash2, User, Plus } from 'lucide-react';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 import NewInvoiceForm from '../Dashboard/Forms/InvoiceForm';
+import TransactionHistory from './TransactionHistory';
+import ChequeTransactionHistory from './ChequeTransactionHistory';
 
 const Invoice = () => {
   const [showNewInvoiceForm, setShowNewInvoiceForm] = useState(false);
@@ -16,6 +18,7 @@ const Invoice = () => {
   const [filterBy, setFilterBy] = useState('ALL');
   const [filterStatus, setFilterStatus] = useState('ALL');
   const [filterCustomer, setFilterCustomer] = useState('ALL');
+  const [activeTab, setActiveTab] = useState('invoices');
 
   const fetchInvoices = async () => {
     const token = localStorage.getItem('access_token');
@@ -305,62 +308,164 @@ const Invoice = () => {
       </div>
       {/* Tab Bar: Stack vertically on mobile, original layout on desktop */}
       <div className="flex flex-col sm:flex-row gap-2 mb-4">
-        <button className="w-full sm:w-auto bg-[#243158] text-white rounded-md px-4 py-2 text-sm font-medium">Invoices</button>
-        <button className="w-full sm:w-auto bg-white border border-gray-300 text-gray-800 rounded-md px-4 py-2 text-sm font-medium">Transaction History</button>
-        <button className="w-full sm:w-auto bg-white border border-gray-300 text-gray-800 rounded-md px-4 py-2 text-sm font-medium">Check Transaction History</button>
+        <button 
+          onClick={() => setActiveTab('invoices')}
+          className={`w-full sm:w-auto rounded-md px-4 py-2 text-sm font-medium ${
+            activeTab === 'invoices' 
+              ? 'bg-[#243158] text-white' 
+              : 'bg-white border border-gray-300 text-gray-800'
+          }`}
+        >
+          Invoices
+        </button>
+        <button 
+          onClick={() => setActiveTab('transaction-history')}
+          className={`w-full sm:w-auto rounded-md px-4 py-2 text-sm font-medium ${
+            activeTab === 'transaction-history' 
+              ? 'bg-[#243158] text-white' 
+              : 'bg-white border border-gray-300 text-gray-800'
+          }`}
+        >
+          Transaction History
+        </button>
+        <button 
+          onClick={() => setActiveTab('cheque-transaction-history')}
+          className={`w-full sm:w-auto rounded-md px-4 py-2 text-sm font-medium ${
+            activeTab === 'cheque-transaction-history' 
+              ? 'bg-[#243158] text-white' 
+              : 'bg-white border border-gray-300 text-gray-800'
+          }`}
+        >
+          Cheque Transaction History
+        </button>
       </div>
-      <div className="bg-white rounded-lg shadow-lg">
-        {loading ? (
-          <p className="p-4 text-center text-sm">Loading invoices...</p>
-        ) : (
-          <>
-            {/* Desktop Table: Original layout, shown on desktop */}
-            <div className="hidden sm:block overflow-x-auto">
-              <table className="w-full table-fixed border-collapse">
-                <thead>
-                  <tr className="bg-gray-100 text-gray-700 text-xs uppercase">
-                    <th className="p-2 w-12 text-center align-middle">
-                      <input
-                        type="checkbox"
-                        onChange={handleSelectAll}
-                        checked={selectedInvoices.length === invoices.length && invoices.length > 0}
-                        aria-label="Select all invoices"
-                      />
-                    </th>
-                    <th className="p-2 w-[80px] text-left whitespace-nowrap">INVOICE ID</th>
-                    <th className="p-2 w-[150px] text-left whitespace-nowrap">CUSTOMER</th>
-                    <th className="p-2 w-[120px] text-left whitespace-nowrap">INVOICE DATE</th>
-                    <th className="p-2 w-[120px] text-left whitespace-nowrap">DUE DATE</th>
-                    <th className="p-2 w-[100px] text-left whitespace-nowrap">VALUE</th>
-                    <th className="p-2 w-[100px] text-left whitespace-nowrap">DUE BALANCE</th>
-                    <th className="p-2 w-[100px] text-left whitespace-nowrap">STATUS</th>
-                    <th className="p-2 w-[100px] text-left whitespace-nowrap">DOCUMENT</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {getFilteredInvoices().length === 0 ? (
-                    <tr>
-                      <td colSpan="9" className="p-4 text-center text-gray-500">
-                        No invoices found.
-                      </td>
+      {/* Conditional rendering based on active tab */}
+      {activeTab === 'invoices' && (
+        <div className="bg-white rounded-lg shadow-lg">
+          {loading ? (
+            <p className="p-4 text-center text-sm">Loading invoices...</p>
+          ) : (
+            <>
+              {/* Desktop Table: Original layout, shown on desktop */}
+              <div className="hidden sm:block overflow-x-auto">
+                <table className="w-full table-fixed border-collapse">
+                  <thead>
+                    <tr className="bg-gray-100 text-gray-700 text-xs uppercase">
+                      <th className="p-2 w-12 text-center align-middle">
+                        <input
+                          type="checkbox"
+                          onChange={handleSelectAll}
+                          checked={selectedInvoices.length === invoices.length && invoices.length > 0}
+                          aria-label="Select all invoices"
+                        />
+                      </th>
+                      <th className="p-2 w-[80px] text-left whitespace-nowrap">INVOICE ID</th>
+                      <th className="p-2 w-[150px] text-left whitespace-nowrap">CUSTOMER</th>
+                      <th className="p-2 w-[120px] text-left whitespace-nowrap">INVOICE DATE</th>
+                      <th className="p-2 w-[120px] text-left whitespace-nowrap">DUE DATE</th>
+                      <th className="p-2 w-[100px] text-left whitespace-nowrap">VALUE</th>
+                      <th className="p-2 w-[100px] text-left whitespace-nowrap">DUE BALANCE</th>
+                      <th className="p-2 w-[100px] text-left whitespace-nowrap">STATUS</th>
+                      <th className="p-2 w-[100px] text-left whitespace-nowrap">DOCUMENT</th>
                     </tr>
-                  ) : (
-                    getFilteredInvoices().map((inv) => (
-                      <tr key={inv.id} className="hover:bg-gray-50">
-                        <td className="p-2 w-12 text-center align-middle">
-                          <input
-                            type="checkbox"
-                            checked={selectedInvoices.includes(inv.id)}
-                            onChange={() => handleSelectInvoice(inv.id)}
-                            aria-label={`Select invoice ${inv.reference_id || inv.id}`}
-                          />
+                  </thead>
+                  <tbody>
+                    {getFilteredInvoices().length === 0 ? (
+                      <tr>
+                        <td colSpan="9" className="p-4 text-center text-gray-500">
+                          No invoices found.
                         </td>
-                        <td className="p-2 w-[80px] text-left whitespace-nowrap">{inv.reference_id || inv.id}</td>
-                        <td className="p-2 w-[150px] text-left whitespace-nowrap">{inv.customer_name || 'N/A'}</td>
-                        <td className="p-2 w-[120px] text-left whitespace-nowrap">{inv.start_date}</td>
-                        <td className="p-2 w-[120px] text-left whitespace-nowrap">
+                      </tr>
+                    ) : (
+                      getFilteredInvoices().map((inv) => (
+                        <tr key={inv.id} className="hover:bg-gray-50">
+                          <td className="p-2 w-12 text-center align-middle">
+                            <input
+                              type="checkbox"
+                              checked={selectedInvoices.includes(inv.id)}
+                              onChange={() => handleSelectInvoice(inv.id)}
+                              aria-label={`Select invoice ${inv.reference_id || inv.id}`}
+                            />
+                          </td>
+                          <td className="p-2 w-[80px] text-left whitespace-nowrap">{inv.reference_id || inv.id}</td>
+                          <td className="p-2 w-[150px] text-left whitespace-nowrap">{inv.customer_name || 'N/A'}</td>
+                          <td className="p-2 w-[120px] text-left whitespace-nowrap">{inv.start_date}</td>
+                          <td className="p-2 w-[120px] text-left whitespace-nowrap">
+                            <span
+                              className={`inline-flex items-center px-2.5 py-0.5 rounded-full ${
+                                new Date(inv.due_date) < new Date()
+                                  ? 'bg-red-100 text-red-800'
+                                  : 'bg-yellow-100 text-yellow-800'
+                              }`}
+                            >
+                              {inv.due_date}
+                            </span>
+                          </td>
+                          <td className="p-2 w-[100px] text-left whitespace-nowrap">{`INR ${inv.value || '0.00'}`}</td>
+                          <td className="p-2 w-[100px] text-left whitespace-nowrap">{`INR ${inv.due_balance || '0.00'}`}</td>
+                          <td className="p-2 w-[100px] text-left whitespace-nowrap">
+                            <span
+                              className={`inline-flex items-center px-2.5 py-0.5 rounded-full ${
+                                inv.status === 'PAID'
+                                  ? 'bg-green-100 text-green-800'
+                                  : 'bg-yellow-100 text-yellow-800'
+                              }`}
+                            >
+                              {inv.status || 'Pending'}
+                            </span>
+                          </td>
+                          <td className="p-2 w-[100px] text-left whitespace-nowrap">
+                            <div className="flex space-x-2 justify-center">
+                              <Printer className="cursor-pointer hover:text-blue-600" onClick={() => handlePrint(inv.id)} />
+                              <Trash2
+                                className="cursor-pointer hover:text-red-600"
+                                onClick={() => handleDelete(inv.id)}
+                              />
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+              {/* Mobile Card Layout: Shown on mobile */}
+              <div className="block sm:hidden">
+                {getFilteredInvoices().length === 0 ? (
+                  <p className="p-4 text-center text-gray-500 text-sm">No invoices found.</p>
+                ) : (
+                  getFilteredInvoices().map((inv) => (
+                    <div key={inv.id} className="border-b border-gray-200 p-4 hover:bg-gray-50">
+                      <div className="flex items-center justify-between mb-2">
+                        <input
+                          type="checkbox"
+                          checked={selectedInvoices.includes(inv.id)}
+                          onChange={() => handleSelectInvoice(inv.id)}
+                          aria-label={`Select invoice ${inv.reference_id || inv.id}`}
+                          className="h-5 w-5"
+                        />
+                        <div className="flex space-x-2">
+                          <Printer className="cursor-pointer hover:text-blue-600 h-5 w-5" onClick={() => handlePrint(inv.id)} />
+                          <Trash2
+                            className="cursor-pointer hover:text-red-600 h-5 w-5"
+                            onClick={() => handleDelete(inv.id)}
+                          />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 text-sm">
+                        <div>
+                          <span className="font-medium">Invoice ID:</span> {inv.reference_id || inv.id}
+                        </div>
+                        <div>
+                          <span className="font-medium">Customer:</span> {inv.customer_name || 'N/A'}
+                        </div>
+                        <div>
+                          <span className="font-medium">Invoice Date:</span> {inv.start_date}
+                        </div>
+                        <div>
+                          <span className="font-medium">Due Date:</span>
                           <span
-                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full ${
+                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs ml-1 ${
                               new Date(inv.due_date) < new Date()
                                 ? 'bg-red-100 text-red-800'
                                 : 'bg-yellow-100 text-yellow-800'
@@ -368,12 +473,17 @@ const Invoice = () => {
                           >
                             {inv.due_date}
                           </span>
-                        </td>
-                        <td className="p-2 w-[100px] text-left whitespace-nowrap">{`INR ${inv.value || '0.00'}`}</td>
-                        <td className="p-2 w-[100px] text-left whitespace-nowrap">{`INR ${inv.due_balance || '0.00'}`}</td>
-                        <td className="p-2 w-[100px] text-left whitespace-nowrap">
+                        </div>
+                        <div>
+                          <span className="font-medium">Value:</span> INR {inv.value || '0.00'}
+                        </div>
+                        <div>
+                          <span className="font-medium">Due Balance:</span> INR {inv.due_balance || '0.00'}
+                        </div>
+                        <div>
+                          <span className="font-medium">Status:</span>
                           <span
-                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full ${
+                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs ml-1 ${
                               inv.status === 'PAID'
                                 ? 'bg-green-100 text-green-800'
                                 : 'bg-yellow-100 text-yellow-800'
@@ -381,93 +491,26 @@ const Invoice = () => {
                           >
                             {inv.status || 'Pending'}
                           </span>
-                        </td>
-                        <td className="p-2 w-[100px] text-left whitespace-nowrap">
-                          <div className="flex space-x-2 justify-center">
-                            <Printer className="cursor-pointer hover:text-blue-600" onClick={() => handlePrint(inv.id)} />
-                            <Trash2
-                              className="cursor-pointer hover:text-red-600"
-                              onClick={() => handleDelete(inv.id)}
-                            />
-                          </div>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-            {/* Mobile Card Layout: Shown on mobile */}
-            <div className="block sm:hidden">
-              {getFilteredInvoices().length === 0 ? (
-                <p className="p-4 text-center text-gray-500 text-sm">No invoices found.</p>
-              ) : (
-                getFilteredInvoices().map((inv) => (
-                  <div key={inv.id} className="border-b border-gray-200 p-4 hover:bg-gray-50">
-                    <div className="flex items-center justify-between mb-2">
-                      <input
-                        type="checkbox"
-                        checked={selectedInvoices.includes(inv.id)}
-                        onChange={() => handleSelectInvoice(inv.id)}
-                        aria-label={`Select invoice ${inv.reference_id || inv.id}`}
-                        className="h-5 w-5"
-                      />
-                      <div className="flex space-x-2">
-                        <Printer className="cursor-pointer hover:text-blue-600 h-5 w-5" onClick={() => handlePrint(inv.id)} />
-                        <Trash2
-                          className="cursor-pointer hover:text-red-600 h-5 w-5"
-                          onClick={() => handleDelete(inv.id)}
-                        />
+                        </div>
                       </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-2 text-sm">
-                      <div>
-                        <span className="font-medium">Invoice ID:</span> {inv.reference_id || inv.id}
-                      </div>
-                      <div>
-                        <span className="font-medium">Customer:</span> {inv.customer_name || 'N/A'}
-                      </div>
-                      <div>
-                        <span className="font-medium">Invoice Date:</span> {inv.start_date}
-                      </div>
-                      <div>
-                        <span className="font-medium">Due Date:</span>
-                        <span
-                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs ml-1 ${
-                            new Date(inv.due_date) < new Date()
-                              ? 'bg-red-100 text-red-800'
-                              : 'bg-yellow-100 text-yellow-800'
-                          }`}
-                        >
-                          {inv.due_date}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="font-medium">Value:</span> INR {inv.value || '0.00'}
-                      </div>
-                      <div>
-                        <span className="font-medium">Due Balance:</span> INR {inv.due_balance || '0.00'}
-                      </div>
-                      <div>
-                        <span className="font-medium">Status:</span>
-                        <span
-                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs ml-1 ${
-                            inv.status === 'PAID'
-                              ? 'bg-green-100 text-green-800'
-                              : 'bg-yellow-100 text-yellow-800'
-                          }`}
-                        >
-                          {inv.status || 'Pending'}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </>
-        )}
-      </div>
+                  ))
+                )}
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* Transaction History Tab */}
+      {activeTab === 'transaction-history' && (
+        <TransactionHistory />
+      )}
+
+      {/* Cheque Transaction History Tab */}
+      {activeTab === 'cheque-transaction-history' && (
+        <ChequeTransactionHistory />
+      )}
       {showNewInvoiceForm && (
         <NewInvoiceForm
           onClose={() => setShowNewInvoiceForm(false)}

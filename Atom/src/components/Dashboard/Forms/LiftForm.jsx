@@ -34,6 +34,8 @@ const LiftForm = ({
     license: '',
     licenseStartDate: '',
     licenseExpiryDate: '',
+    // Ensure lifts can be associated to a customer when opened from Customer Details
+    customer: '',
     ...initialData,
   });
 
@@ -158,6 +160,18 @@ const LiftForm = ({
     const fields = ['brand', 'floorID', 'machineType', 'liftType', 'doorType', 'machineBrand', 'doorBrand', 'controllerBrand', 'cabin'];
     fields.forEach(field => fetchOptions(field));
   }, []);
+
+  // Debug initialData and ensure customer is set
+  useEffect(() => {
+    console.log('LiftForm - initialData received:', initialData);
+    console.log('LiftForm - newLift state after initialData:', newLift);
+    
+    // Ensure customer is set from initialData
+    if (initialData.customer && !newLift.customer) {
+      console.log('LiftForm - Setting customer from initialData:', initialData.customer);
+      setNewLift(prev => ({ ...prev, customer: initialData.customer }));
+    }
+  }, [initialData, newLift.customer]);
 
   // Handle form input changes
   const handleInputChange = (e) => {
@@ -358,24 +372,39 @@ const LiftForm = ({
         license: newLift.license || '',
         license_start_date: newLift.licenseStartDate || null,
         license_expiry_date: newLift.licenseExpiryDate || null,
+        // Associate to customer if provided (CustomerDetails passes initialData.customer)
+        customer: newLift.customer || null,
       };
 
+      console.log('LiftForm - newLift state:', newLift);
+      console.log('LiftForm - liftData being sent:', liftData);
+      
+      // Ensure customer is set
+      if (!liftData.customer) {
+        console.error('LiftForm - Customer not set! newLift.customer:', newLift.customer);
+        showErrorMessage('Customer not properly set. Please try again.');
+        return;
+      }
+
       // Make API call based on edit or create mode
+      let response;
       if (isEdit) {
-        await axiosInstance.put(
+        response = await axiosInstance.put(
           `${apiBaseUrl}/auth/edit_lift/${initialData.id}/`, 
           liftData
         );
         showSuccessMessage('Lift updated successfully.');
       } else {
-        await axiosInstance.post(
+        response = await axiosInstance.post(
           `${apiBaseUrl}/auth/add_lift/`, 
           liftData
         );
+        console.log('LiftForm - API response:', response.data);
         showSuccessMessage('Lift created successfully.');
       }
 
       // Notify parent component of successful submission
+      console.log('LiftForm - calling onSubmitSuccess');
       onSubmitSuccess();
       onClose();
     } catch (error) {
@@ -545,9 +574,9 @@ const LiftForm = ({
                     required
                   >
                     <option value="">Select Floor</option>
-                    {dropdownOptions.floorOptions?.map((option) => (
-                      <option key={option} value={option}>
-                        {option}
+                    {existingOptions.floorID?.map((option) => (
+                      <option key={option.id || option.value} value={option.value}>
+                        {option.value}
                       </option>
                     ))}
                   </select>
@@ -575,9 +604,9 @@ const LiftForm = ({
                     required
                   >
                     <option value="">Select Brand</option>
-                    {dropdownOptions.brandOptions?.map((option) => (
-                      <option key={option} value={option}>
-                        {option}
+                    {existingOptions.brand?.map((option) => (
+                      <option key={option.id || option.value} value={option.value}>
+                        {option.value}
                       </option>
                     ))}
                   </select>
@@ -672,9 +701,9 @@ const LiftForm = ({
                     className="flex-1 px-4 py-2.5 rounded-l-lg border border-gray-300 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 appearance-none bg-white"
                   >
                     <option value="">Select Type</option>
-                    {dropdownOptions.machineTypeOptions?.map((option) => (
-                      <option key={option} value={option}>
-                        {option}
+                    {existingOptions.machineType?.map((option) => (
+                      <option key={option.id || option.value} value={option.value}>
+                        {option.value}
                       </option>
                     ))}
                   </select>
@@ -701,9 +730,9 @@ const LiftForm = ({
                     className="flex-1 px-4 py-2.5 rounded-l-lg border border-gray-300 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 appearance-none bg-white"
                   >
                     <option value="">Select Brand</option>
-                    {dropdownOptions.machineBrandOptions?.map((option) => (
-                      <option key={option} value={option}>
-                        {option}
+                    {existingOptions.machineBrand?.map((option) => (
+                      <option key={option.id || option.value} value={option.value}>
+                        {option.value}
                       </option>
                     ))}
                   </select>
@@ -730,9 +759,9 @@ const LiftForm = ({
                     className="flex-1 px-4 py-2.5 rounded-l-lg border border-gray-300 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 appearance-none bg-white"
                   >
                     <option value="">Select Type</option>
-                    {dropdownOptions.liftTypeOptions?.map((option) => (
-                      <option key={option} value={option}>
-                        {option}
+                    {existingOptions.liftType?.map((option) => (
+                      <option key={option.id || option.value} value={option.value}>
+                        {option.value}
                       </option>
                     ))}
                   </select>
@@ -769,9 +798,9 @@ const LiftForm = ({
                     className="flex-1 px-4 py-2.5 rounded-l-lg border border-gray-300 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 appearance-none bg-white"
                   >
                     <option value="">Select Type</option>
-                    {dropdownOptions.doorTypeOptions?.map((option) => (
-                      <option key={option} value={option}>
-                        {option}
+                    {existingOptions.doorType?.map((option) => (
+                      <option key={option.id || option.value} value={option.value}>
+                        {option.value}
                       </option>
                     ))}
                   </select>
@@ -798,9 +827,9 @@ const LiftForm = ({
                     className="flex-1 px-4 py-2.5 rounded-l-lg border border-gray-300 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 appearance-none bg-white"
                   >
                     <option value="">Select Brand</option>
-                    {dropdownOptions.doorBrandOptions?.map((option) => (
-                      <option key={option} value={option}>
-                        {option}
+                    {existingOptions.doorBrand?.map((option) => (
+                      <option key={option.id || option.value} value={option.value}>
+                        {option.value}
                       </option>
                     ))}
                   </select>
@@ -827,9 +856,9 @@ const LiftForm = ({
                     className="flex-1 px-4 py-2.5 rounded-l-lg border border-gray-300 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 appearance-none bg-white"
                   >
                     <option value="">Select Brand</option>
-                    {dropdownOptions.controllerBrandOptions?.map((option) => (
-                      <option key={option} value={option}>
-                        {option}
+                    {existingOptions.controllerBrand?.map((option) => (
+                      <option key={option.id || option.value} value={option.value}>
+                        {option.value}
                       </option>
                     ))}
                   </select>
@@ -864,9 +893,9 @@ const LiftForm = ({
                     required
                   >
                     <option value="">Select Cabin</option>
-                    {dropdownOptions.cabinOptions?.map((option) => (
-                      <option key={option} value={option}>
-                        {option}
+                    {existingOptions.cabin?.map((option) => (
+                      <option key={option.id || option.value} value={option.value}>
+                        {option.value}
                       </option>
                     ))}
                   </select>

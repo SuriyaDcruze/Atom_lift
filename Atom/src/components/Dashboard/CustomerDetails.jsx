@@ -65,9 +65,29 @@ const CustomerDetails = () => {
     if (!axiosInstance) return;
 
     try {
+      console.log('Fetching lifts for customerId:', customerId);
       // Fetch all lifts and filter by customer
       const response = await axiosInstance.get(`${apiBaseUrl}/auth/lift_list/`);
-      const customerLifts = response.data.filter(lift => lift.customer == customerId);
+      console.log('All lifts:', response.data);
+      
+      // Try multiple comparison methods to find customer lifts
+      const customerLifts = response.data.filter(lift => {
+        const liftCustomer = lift.customer;
+        const matches = (
+          liftCustomer == customerId || 
+          liftCustomer === parseInt(customerId) ||
+          liftCustomer === customerId.toString() ||
+          liftCustomer === String(customerId)
+        );
+        
+        if (matches) {
+          console.log('Found matching lift:', lift);
+        }
+        
+        return matches;
+      });
+      
+      console.log('Filtered customer lifts:', customerLifts);
       setLifts(customerLifts);
     } catch (error) {
       console.error('Error fetching customer lifts:', error);
@@ -132,6 +152,7 @@ const CustomerDetails = () => {
 
   const handleAddLifts = () => {
     // Open lift form modal
+    console.log('CustomerDetails - Opening lift form for customerId:', customerId);
     setIsLiftFormOpen(true);
   };
 
@@ -470,7 +491,7 @@ const CustomerDetails = () => {
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <span className="text-sm font-medium text-gray-600">Lift ID:</span>
-                      <p className="text-gray-800">{lift.lift_id || 'N/A'}</p>
+                      <p className="text-gray-800">{lift.lift_id || lift.lift_code || 'N/A'}</p>
                     </div>
                     <div>
                       <span className="text-sm font-medium text-gray-600">Model:</span>
@@ -478,11 +499,11 @@ const CustomerDetails = () => {
                     </div>
                     <div>
                       <span className="text-sm font-medium text-gray-600">Capacity:</span>
-                      <p className="text-gray-800">{lift.capacity || 'N/A'}</p>
+                      <p className="text-gray-800">{lift.no_of_passengers || lift.capacity || 'N/A'}</p>
                     </div>
                     <div>
-                      <span className="text-sm font-medium text-gray-600">Status:</span>
-                      <p className="text-gray-800">{lift.status || 'N/A'}</p>
+                      <span className="text-sm font-medium text-gray-600">Brand:</span>
+                      <p className="text-gray-800">{lift.brand_name || lift.brand || 'N/A'}</p>
                     </div>
                   </div>
                 </div>
@@ -492,6 +513,7 @@ const CustomerDetails = () => {
             <div className="text-center py-8">
               <p className="text-gray-500 text-lg">No Lifts</p>
               <p className="text-gray-400 text-sm mt-2">Click "ADD LIFTS" to add lifts for this customer</p>
+              <p className="text-gray-400 text-xs mt-1">Debug: lifts.length = {lifts.length}</p>
             </div>
           )}
         </div>
@@ -589,12 +611,10 @@ const CustomerDetails = () => {
           initialData={{ customer: customerId }}
           onClose={() => setIsLiftFormOpen(false)}
           onSubmitSuccess={() => {
+            console.log('LiftForm onSubmitSuccess called for customerId:', customerId);
             fetchCustomerLifts(); // Refresh lifts data
             setIsLiftFormOpen(false);
             toast.success('Lift added successfully!');
-          }}
-          onSubmitError={(error) => {
-            toast.error(error || 'Failed to add lift');
           }}
           apiBaseUrl={apiBaseUrl}
           dropdownOptions={{}}

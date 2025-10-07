@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { 
-  Search, Calendar, MapPin, ChevronDown, 
+import {
+  Search, Calendar, MapPin, ChevronDown,
   ChevronUp, Check, UserPlus, ClipboardList,
-  Download, Upload 
+  Download, Upload
 } from 'lucide-react';
 
 const RoutineServices = () => {
@@ -34,28 +34,28 @@ const RoutineServices = () => {
         <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
           <h1 className="text-2xl font-bold text-gray-800">Routine Services</h1>
           <div className="mt-4 md:mt-0 flex flex-wrap gap-2">
-            <button 
+            <button
               className="flex items-center bg-white border rounded-md px-3 py-2 text-sm hover:bg-gray-50"
               style={{ borderColor: primaryColor, color: primaryColor }}
             >
               <UserPlus className="h-4 w-4 mr-2" />
               Bulk Assign
             </button>
-            <button 
+            <button
               className="flex items-center bg-white border rounded-md px-3 py-2 text-sm hover:bg-gray-50"
               style={{ borderColor: primaryColor, color: primaryColor }}
             >
               <ClipboardList className="h-4 w-4 mr-2" />
               Bulk Action
             </button>
-            <button 
+            <button
               className="flex items-center bg-white border rounded-md px-3 py-2 text-sm hover:bg-gray-50"
               style={{ borderColor: primaryColor, color: primaryColor }}
             >
               <Upload className="h-4 w-4 mr-2" />
               Import CSV
             </button>
-            <button 
+            <button
               className="flex items-center bg-white border rounded-md px-3 py-2 text-sm hover:bg-gray-50"
               style={{ borderColor: primaryColor, color: primaryColor }}
             >
@@ -83,18 +83,42 @@ const RoutineServices = () => {
                 <div className="text-gray-500 mb-1">Period</div>
                 <select className="w-full border border-gray-300 rounded p-2">
                   <option>ALL TIME</option>
+                  <option>LAST MONTH</option>
+                  <option>THIS MONTH</option>
+                  <option>LAST YEAR</option>
+                  <option>THIS YEAR</option>
+                  <option>LAST 3 MONTHS</option>
+                  <option>LAST 6 MONTHS</option>
+                  <option>LAST 12 MONTHS</option>
+                  <option>CUSTOM</option>
                 </select>
               </div>
               <div>
                 <div className="text-gray-500 mb-1">Month</div>
                 <select className="w-full border border-gray-300 rounded p-2">
                   <option>ALL</option>
+                  <option>JANUARY</option>
+                  <option>FEBRUARY</option>
+                  <option>MARCH</option>
+                  <option>APRIL</option>
+                  <option>MAY</option>
+                  <option>JUNE</option>
+                  <option>JULY</option>
+                  <option>AUGUST</option>
+                  <option>SEPTEMBER</option>
+                  <option>OCTOBER</option>
+                  <option>NOVEMBER</option>
+                  <option>DECEMBER</option>
+
+
+
                 </select>
               </div>
               <div>
                 <div className="text-gray-500 mb-1">By Date</div>
                 <select className="w-full border border-gray-300 rounded p-2">
                   <option>PLANNED DATE</option>
+                  <option >ATTEND DATE</option>
                 </select>
               </div>
               <div>
@@ -107,6 +131,11 @@ const RoutineServices = () => {
                 <div className="text-gray-500 mb-1">Status</div>
                 <select className="w-full border border-gray-300 rounded p-2">
                   <option>ALL</option>
+                  <option>DUE</option>
+                  <option>OVER DUE</option>
+                  <option>IN PROGRESS</option>
+                  <option>COMPLETED</option>
+
                 </select>
               </div>
               <div>
@@ -137,6 +166,8 @@ const RoutineServices = () => {
                 <div className="text-gray-500 mb-1">By</div>
                 <select className="w-full border border-gray-300 rounded p-2">
                   <option>ALL</option>
+                  <option>ASSIGNED</option>
+                  <option>NON ASSIGNED</option>
                 </select>
               </div>
               <div>
@@ -152,7 +183,7 @@ const RoutineServices = () => {
                 </select>
               </div>
               <div className="flex items-end">
-                <button 
+                <button
                   className="flex items-center justify-center text-white rounded p-2 w-full transition-colors"
                   style={{ backgroundColor: primaryColor }}
                 >
@@ -180,7 +211,7 @@ const RoutineServices = () => {
             <div className="col-span-1 px-2">STATUS</div>
             <div className="col-span-1 px-2">LOCATION</div>
           </div>
-          
+
           {/* Table Row */}
           {services.map((service, index) => (
             <div key={index} className="grid grid-cols-12 p-3 border-b border-gray-200 text-sm items-center">
@@ -201,10 +232,9 @@ const RoutineServices = () => {
               <div className="col-span-1 px-2">{service.employee}</div>
               <div className="col-span-1 px-2">{service.numServices}</div>
               <div className="col-span-1 px-2">
-                <span className={`px-2 py-1 rounded-full text-xs ${
-                  service.status === 'DUE' ? 'bg-yellow-100 text-yellow-800' : 
-                  'bg-gray-100 text-gray-800'
-                }`}>
+                <span className={`px-2 py-1 rounded-full text-xs ${service.status === 'DUE' ? 'bg-yellow-100 text-yellow-800' :
+                    'bg-gray-100 text-gray-800'
+                  }`}>
                   {service.status}
                 </span>
               </div>
