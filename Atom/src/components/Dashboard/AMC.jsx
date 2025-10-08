@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 import AMCForm from '../Dashboard/Forms/AMCform';
-import { Edit, Trash2, Search, ChevronDown, MoreVertical, Download, Upload, Import } from 'lucide-react';
+import { Edit, Trash2, Search, ChevronDown, MoreVertical, Download, Upload, Import, RotateCcw, Plus, Wrench, X } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom'; // Replace useHistory with useNavigate
 
 const apiBaseUrl = import.meta.env.VITE_BASE_API;
@@ -43,7 +43,20 @@ const AMC = () => {
   // State for modals
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isRenewalModalOpen, setIsRenewalModalOpen] = useState(false);
   const [currentAMC, setCurrentAMC] = useState(null);
+
+  // State for renewal form
+  const [renewalFormData, setRenewalFormData] = useState({
+    startDate: '',
+    endDate: '',
+    amcType: '',
+    paymentMode: '',
+    noOfServices: '',
+    amount: '',
+    notes: '',
+    amcDetails: ''
+  });
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -206,6 +219,94 @@ const AMC = () => {
         }
       }
     }
+  };
+
+  // Handle AMC renewal - Open modal
+  const handleRenewAMC = (amc) => {
+    setCurrentAMC(amc);
+    // Pre-fill form with current AMC data
+    setRenewalFormData({
+      startDate: amc.endDate || '',
+      endDate: '',
+      amcType: amc.amcType || '',
+      paymentMode: '',
+      noOfServices: amc.noOfServices || '',
+      amount: '',
+      notes: '',
+      amcDetails: ''
+    });
+    setIsRenewalModalOpen(true);
+  };
+
+  // Handle renewal form submission
+  const handleRenewalSubmit = async () => {
+    if (!currentAMC) return;
+
+    const axiosInstance = createAxiosInstance();
+    if (!axiosInstance) return;
+
+    try {
+      const renewalData = {
+        amc_id: currentAMC.id,
+        start_date: renewalFormData.startDate,
+        end_date: renewalFormData.endDate,
+        amc_type: renewalFormData.amcType,
+        payment_mode: renewalFormData.paymentMode,
+        no_of_services: renewalFormData.noOfServices,
+        amount: renewalFormData.amount,
+        notes: renewalFormData.notes,
+        amc_details: renewalFormData.amcDetails
+      };
+
+      await axiosInstance.post(`${apiBaseUrl}/amc/amc-renewal/`, renewalData);
+      
+      // Close modal and refresh data
+      setIsRenewalModalOpen(false);
+      setCurrentAMC(null);
+      setRenewalFormData({
+        startDate: '',
+        endDate: '',
+        amcType: '',
+        paymentMode: '',
+        noOfServices: '',
+        amount: '',
+        notes: '',
+        amcDetails: ''
+      });
+      
+      fetchData();
+      toast.success('AMC renewal request submitted successfully.');
+    } catch (error) {
+      console.error('Error submitting renewal:', error);
+      if (error.response?.status === 401) {
+        toast.error('Session expired. Please log in again.');
+        localStorage.removeItem('access_token');
+        window.location.href = '/login';
+      } else {
+        toast.error(error.response?.data?.error || 'Failed to submit renewal request.');
+      }
+    }
+  };
+
+  // Handle renewal form input changes
+  const handleRenewalFormChange = (e) => {
+    const { name, value } = e.target;
+    setRenewalFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  // Handle Add Lift
+  const handleAddLift = (amc) => {
+    // Navigate to lift form with AMC data
+    navigate(`/lifts?amcId=${amc.id}&customerId=${amc.customer}`);
+  };
+
+  // Handle Update Lift
+  const handleUpdateLift = (amc) => {
+    // Navigate to lift update form with AMC data
+    navigate(`/lifts?amcId=${amc.id}&customerId=${amc.customer}&action=update`);
   };
 
   // Handle bulk delete
@@ -610,20 +711,52 @@ const AMC = () => {
                     </td>
                     <td className="p-3 lg:p-4 text-gray-800 hidden xl:table-cell">{amc.amount}</td>
                     <td className="p-3 lg:p-4 whitespace-nowrap">
-                      <div className="flex space-x-2">
+                      <div className="flex flex-col space-y-2">
+                        {/* RENEW AMC Button - Prominent */}
                         <button
-                          onClick={() => openEditModal(amc)}
-                          className="text-blue-500 hover:text-blue-700 p-1"
-                          title="Edit"
+                          onClick={() => handleRenewAMC(amc)}
+                          className="bg-gray-600 hover:bg-gray-700 text-white px-3 py-2 rounded text-xs font-semibold uppercase transition duration-200"
+                          title="Renew AMC"
                         >
-                          <Edit className="w-4 h-4 md:w-5 md:h-5" />
+                          RENEW AMC
                         </button>
+                        
+                        {/* Edit and Delete Icons */}
+                        <div className="flex space-x-1">
+                          <button
+                            onClick={() => openEditModal(amc)}
+                            className="bg-blue-500 hover:bg-blue-600 text-white p-1 rounded"
+                            title="Edit"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteAMC(amc.id)}
+                            className="bg-red-500 hover:bg-red-600 text-white p-1 rounded"
+                            title="Delete"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                        
+                        {/* ADD LIFT Button */}
                         <button
-                          onClick={() => handleDeleteAMC(amc.id)}
-                          className="text-red-500 hover:text-red-700 p-1"
-                          title="Delete"
+                          onClick={() => handleAddLift(amc)}
+                          className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-xs font-semibold uppercase transition duration-200 flex items-center justify-center"
+                          title="Add Lift"
                         >
-                          <Trash2 className="w-4 h-4 md:w-5 md:h-5" />
+                          <Plus className="w-3 h-3 mr-1" />
+                          ADD LIFT
+                        </button>
+                        
+                        {/* UPDATE LIFT Button */}
+                        <button
+                          onClick={() => handleUpdateLift(amc)}
+                          className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-xs font-semibold uppercase transition duration-200 flex items-center justify-center"
+                          title="Update Lift"
+                        >
+                          <Wrench className="w-3 h-3 mr-1" />
+                          UPDATE LIFT
                         </button>
                       </div>
                     </td>
@@ -691,20 +824,52 @@ const AMC = () => {
                     <p className="text-sm text-gray-600 truncate">{amc.customer}</p>
                   </div>
                 </div>
-                <div className="flex space-x-2 ml-2">
+                <div className="flex flex-col space-y-2 ml-2">
+                  {/* RENEW AMC Button - Prominent */}
                   <button
-                    onClick={() => openEditModal(amc)}
-                    className="text-blue-500 hover:text-blue-700 p-1"
-                    title="Edit"
+                    onClick={() => handleRenewAMC(amc)}
+                    className="bg-gray-600 hover:bg-gray-700 text-white px-3 py-2 rounded text-xs font-semibold uppercase transition duration-200"
+                    title="Renew AMC"
                   >
-                    <Edit className="w-5 h-5" />
+                    RENEW AMC
                   </button>
+                  
+                  {/* Edit and Delete Icons */}
+                  <div className="flex space-x-1">
+                    <button
+                      onClick={() => openEditModal(amc)}
+                      className="bg-blue-500 hover:bg-blue-600 text-white p-1 rounded"
+                      title="Edit"
+                    >
+                      <Edit className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => handleDeleteAMC(amc.id)}
+                      className="bg-red-500 hover:bg-red-600 text-white p-1 rounded"
+                      title="Delete"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                  
+                  {/* ADD LIFT Button */}
                   <button
-                    onClick={() => handleDeleteAMC(amc.id)}
-                    className="text-red-500 hover:text-red-700 p-1"
-                    title="Delete"
+                    onClick={() => handleAddLift(amc)}
+                    className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-xs font-semibold uppercase transition duration-200 flex items-center justify-center"
+                    title="Add Lift"
                   >
-                    <Trash2 className="w-5 h-5" />
+                    <Plus className="w-3 h-3 mr-1" />
+                    ADD LIFT
+                  </button>
+                  
+                  {/* UPDATE LIFT Button */}
+                  <button
+                    onClick={() => handleUpdateLift(amc)}
+                    className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-xs font-semibold uppercase transition duration-200 flex items-center justify-center"
+                    title="Update Lift"
+                  >
+                    <Wrench className="w-3 h-3 mr-1" />
+                    UPDATE LIFT
                   </button>
                 </div>
               </div>
@@ -807,6 +972,166 @@ const AMC = () => {
             setPaymentTermsOptions,
           }}
         />
+      )}
+
+      {/* Renewal Modal */}
+      {isRenewalModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            {/* Modal Header */}
+            <div className="bg-blue-500 text-white px-6 py-4 rounded-t-lg flex justify-between items-center">
+              <h2 className="text-xl font-semibold">RENEWAL REQUESTS</h2>
+              <button
+                onClick={() => {
+                  setIsRenewalModalOpen(false);
+                  setCurrentAMC(null);
+                }}
+                className="text-white hover:text-gray-200 transition duration-200"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                {/* Start Date */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">START DATE</label>
+                  <input
+                    type="date"
+                    name="startDate"
+                    value={renewalFormData.startDate}
+                    onChange={handleRenewalFormChange}
+                    className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                {/* End Date */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">END DATE</label>
+                  <input
+                    type="date"
+                    name="endDate"
+                    value={renewalFormData.endDate}
+                    onChange={handleRenewalFormChange}
+                    className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                {/* AMC Type */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">AMC TYPE</label>
+                  <select
+                    name="amcType"
+                    value={renewalFormData.amcType}
+                    onChange={handleRenewalFormChange}
+                    className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Select AMC Type</option>
+                    {amcTypeOptions.map((option, index) => (
+                      <option key={option.id || `${option.value}-${index}`} value={option.value}>
+                        {option.value}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Payment Mode */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">PAYMENT MODE</label>
+                  <select
+                    name="paymentMode"
+                    value={renewalFormData.paymentMode}
+                    onChange={handleRenewalFormChange}
+                    className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Select Payment Mode</option>
+                    <option value="cash">Cash</option>
+                    <option value="cheque">Cheque</option>
+                    <option value="bank_transfer">Bank Transfer</option>
+                    <option value="online">Online</option>
+                  </select>
+                </div>
+
+                {/* No of Services */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">NO OF SERVICES (ROUTINE SERVICES)</label>
+                  <input
+                    type="number"
+                    name="noOfServices"
+                    value={renewalFormData.noOfServices}
+                    onChange={handleRenewalFormChange}
+                    className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Enter number of services"
+                  />
+                </div>
+
+                {/* Amount */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">AMOUNT</label>
+                  <input
+                    type="number"
+                    name="amount"
+                    value={renewalFormData.amount}
+                    onChange={handleRenewalFormChange}
+                    className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Enter amount"
+                    step="0.01"
+                  />
+                </div>
+              </div>
+
+              {/* Notes and AMC Details */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                {/* Notes */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">NOTES</label>
+                  <textarea
+                    name="notes"
+                    value={renewalFormData.notes}
+                    onChange={handleRenewalFormChange}
+                    rows={4}
+                    className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                    placeholder="Enter notes..."
+                  />
+                </div>
+
+                {/* AMC Details */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">AMC DETAILS</label>
+                  <textarea
+                    name="amcDetails"
+                    value={renewalFormData.amcDetails}
+                    onChange={handleRenewalFormChange}
+                    rows={4}
+                    className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                    placeholder="Enter AMC details..."
+                  />
+                </div>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="flex justify-end space-x-3">
+                <button
+                  onClick={() => {
+                    setIsRenewalModalOpen(false);
+                    setCurrentAMC(null);
+                  }}
+                  className="bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded-lg transition duration-200"
+                >
+                  CLOSE
+                </button>
+                <button
+                  onClick={handleRenewalSubmit}
+                  className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg transition duration-200"
+                >
+                  SAVE
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
