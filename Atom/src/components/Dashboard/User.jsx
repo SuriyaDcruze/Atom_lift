@@ -1,29 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from 'react-toastify';
-import { Trash2, Search, ChevronDown, MoreVertical, Download, Upload, CheckCircle, XCircle } from 'lucide-react';
+import { Trash2, Search, ChevronDown, MoreVertical, Download, Upload, CheckCircle, XCircle, PlusCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const apiBaseUrl = import.meta.env.VITE_BASE_API; // http://localhost:8000
 
 const Users = () => {
-  // State for users data and loading/error status
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [selectedUsers, setSelectedUsers] = useState([]);
   const navigate = useNavigate();
 
-  // State for filters
   const [filters, setFilters] = useState({
     search: '',
   });
 
-  // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 7;
 
-  // Fetch users from backend
   useEffect(() => {
     const fetchUsers = async () => {
       setLoading(true);
@@ -38,7 +34,7 @@ const Users = () => {
         }
 
         console.log('Fetching users with token:', token.substring(0, 10) + '...');
-        const response = await axios.get(`${apiBaseUrl}/auth/admin/users/`, {
+        const response = await axios.get(`${apiBaseUrl}/auth/list-users/`, {
           headers: { Authorization: `Bearer ${token}` },
         });
 
@@ -66,7 +62,6 @@ const Users = () => {
     fetchUsers();
   }, [navigate]);
 
-  // Handle import CSV
   const handleImportCSV = async (event) => {
     const file = event.target.files[0];
     if (!file) {
@@ -97,8 +92,7 @@ const Users = () => {
       });
       toast.success('Users imported successfully.');
       document.getElementById('options-dropdown').classList.add('hidden');
-      // Refresh user list
-      const response = await axios.get(`${apiBaseUrl}/auth/admin/users/`, {
+      const response = await axios.get(`${apiBaseUrl}/auth/list-users/`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setUsers(Array.isArray(response.data) ? response.data : []);
@@ -113,7 +107,6 @@ const Users = () => {
     }
   };
 
-  // Handle approve/reject user
   const handleToggleApproval = async (id, isApproved) => {
     try {
       const token = localStorage.getItem('access_token');
@@ -144,7 +137,6 @@ const Users = () => {
     }
   };
 
-  // Handle bulk approve/reject
   const handleBulkApproval = async (approve) => {
     if (selectedUsers.length === 0) {
       toast.warning('No users selected for approval/rejection');
@@ -185,14 +177,12 @@ const Users = () => {
     }
   };
 
-  // Handle filter changes
   const handleFilterChange = (e) => {
     const { name, value } = e.target;
     setFilters(prev => ({ ...prev, [name]: value }));
     setCurrentPage(1);
   };
 
-  // Reset all filters
   const resetFilters = () => {
     setFilters({
       search: '',
@@ -200,7 +190,6 @@ const Users = () => {
     setCurrentPage(1);
   };
 
-  // Handle user selection
   const handleSelectUser = (id) => {
     setSelectedUsers(prev =>
       prev.includes(id)
@@ -209,7 +198,6 @@ const Users = () => {
     );
   };
 
-  // Handle select all users on current page
   const handleSelectAll = (e) => {
     if (e.target.checked) {
       setSelectedUsers(currentUsers.map(user => user.id));
@@ -218,7 +206,6 @@ const Users = () => {
     }
   };
 
-  // Handle user deletion
   const handleDeleteUser = async (id) => {
     if (window.confirm('Are you sure you want to delete this user?')) {
       try {
@@ -229,7 +216,7 @@ const Users = () => {
           return;
         }
 
-        await axios.delete(`${apiBaseUrl}/auth/admin/users/${id}/`, {
+        await axios.delete(`${apiBaseUrl}/auth/delete-user/${id}/`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         setUsers(prev => prev.filter(user => user.id !== id));
@@ -247,7 +234,6 @@ const Users = () => {
     }
   };
 
-  // Handle bulk delete
   const handleBulkDelete = async () => {
     if (selectedUsers.length === 0) {
       toast.warning('No users selected for deletion');
@@ -264,7 +250,7 @@ const Users = () => {
         }
 
         for (const id of selectedUsers) {
-          await axios.delete(`${apiBaseUrl}/auth/admin/users/${id}/`, {
+          await axios.delete(`${apiBaseUrl}/auth/delete-user/${id}/`, {
             headers: { Authorization: `Bearer ${token}` },
           });
         }
@@ -282,7 +268,6 @@ const Users = () => {
     }
   };
 
-  // Handle export to Excel
   const handleExport = async () => {
     try {
       const token = localStorage.getItem('access_token');
@@ -305,9 +290,6 @@ const Users = () => {
       link.click();
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
-
-      toast.success('Users exported successfully.');
-      document.getElementById('options-dropdown').classList.add('hidden');
     } catch (error) {
       const errorMsg = error.response?.data?.error || 'Failed to export users';
       toast.error(errorMsg);
@@ -315,75 +297,87 @@ const Users = () => {
         setError('Session expired or invalid token. Redirecting to login...');
         setTimeout(() => navigate('/login'), 2000);
       }
-      document.getElementById('options-dropdown').classList.add('hidden');
     }
   };
 
-  // Filter users based on current filters
-  const filteredUsers = users.filter(user =>
-    user.username.toLowerCase().includes(filters.search.toLowerCase()) ||
-    user.email.toLowerCase().includes(filters.search.toLowerCase())
-  );
+  const filteredUsers = users.filter(user => {
+    const searchLower = filters.search.toLowerCase();
+    return (
+      user.username.toLowerCase().includes(searchLower) ||
+      user.email.toLowerCase().includes(searchLower)
+    );
+  });
 
-  // Pagination logic
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentUsers = filteredUsers.slice(indexOfFirstItem, indexOfLastItem);
   const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
 
-  // Dropdown for bulk actions, 3-dot menu
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      const bulkActions = document.getElementById('bulk-actions-dropdown');
-      const options = document.getElementById('options-dropdown');
-
-      if (bulkActions && !event.target.closest('#bulk-actions-menu') && !bulkActions.contains(event.target)) {
-        bulkActions.classList.add('hidden');
-      }
-
-      if (options && !event.target.closest('#options-menu') && !options.contains(event.target)) {
-        options.classList.add('hidden');
-      }
-    };
-
-    document.addEventListener('click', handleClickOutside);
-    return () => document.removeEventListener('click', handleClickOutside);
-  }, []);
-
   return (
-    <div className="px-4 sm:px-6 lg:px-8 pt-20">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">Users</h1>
-        <div className="relative inline-block text-left">
+    <div className="container mx-auto p-4 sm:p-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
+        <h2 className="text-2xl font-bold mb-4 sm:mb-0">Users</h2>
+        <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4 w-full sm:w-auto">
           <button
-            id="options-menu"
-            onClick={() => document.getElementById('options-dropdown').classList.toggle('hidden')}
-            className="inline-flex justify-center items-center p-2 rounded-full bg-gray-100 text-gray-700 hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#243158]"
+            onClick={() => navigate('/dashboard/create-user')}
+            className="flex items-center justify-center bg-[#243158] text-white px-4 py-2 rounded-lg hover:bg-[#1e2a4a] transition duration-200"
           >
-            <MoreVertical className="w-5 h-5" />
+            <PlusCircle className="w-5 h-5 mr-2" />
+            Add User
           </button>
-          <div
-            id="options-dropdown"
-            className="hidden origin-top-right absolute right-0 mt-2 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-10"
-          >
-            <div className="py-1" role="menu" aria-orientation="vertical" aria-labelledby="options-menu">
+          <div className="relative w-full sm:w-64">
+            <input
+              type="text"
+              name="search"
+              value={filters.search}
+              onChange={handleFilterChange}
+              placeholder="Search users..."
+              className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#243158]"
+            />
+            <Search className="absolute left-3 top-2.5 w-5 h-5 text-gray-400" />
+          </div>
+          <div className="relative">
+            <button
+              onClick={() =>
+                document.getElementById('options-dropdown').classList.toggle('hidden')
+              }
+              className="flex items-center bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition duration-200"
+            >
+              Options <ChevronDown className="ml-2 w-5 h-5" />
+            </button>
+            <div
+              id="options-dropdown"
+              className="hidden absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg z-10"
+            >
+              <button
+                onClick={() => handleBulkApproval(true)}
+                className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+              >
+                Approve Selected
+              </button>
+              <button
+                onClick={() => handleBulkApproval(false)}
+                className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+              >
+                Reject Selected
+              </button>
+              <button
+                onClick={handleBulkDelete}
+                className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
+              >
+                Delete Selected
+              </button>
               <button
                 onClick={handleExport}
-                className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900"
-                role="menuitem"
+                className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
               >
-                <Download className="w-4 h-4 mr-3" />
+                <Download className="inline w-4 h-4 mr-2" />
                 Export to Excel
               </button>
-              <label
-                htmlFor="import-csv"
-                className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 cursor-pointer"
-                role="menuitem"
-              >
-                <Upload className="w-4 h-4 mr-3" />
+              <label className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                <Upload className="inline w-4 h-4 mr-2" />
                 Import CSV
                 <input
-                  id="import-csv"
                   type="file"
                   accept=".csv"
                   onChange={handleImportCSV}
@@ -392,96 +386,23 @@ const Users = () => {
               </label>
             </div>
           </div>
-        </div>
-      </div>
-
-      {/* Filters Section */}
-      <div className="bg-white rounded-lg shadow p-4 mb-6">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-4 space-y-4 sm:space-y-0">
-          <div className="flex-1">
-            <label htmlFor="search" className="sr-only">
-              Search
-            </label>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Search className="h-5 w-5 text-gray-400" />
-              </div>
-              <input
-                id="search"
-                name="search"
-                type="text"
-                value={filters.search}
-                onChange={handleFilterChange}
-                className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-[#243158] focus:border-[#243158] sm:text-sm"
-                placeholder="Search by username or email..."
-              />
-            </div>
-          </div>
           <button
             onClick={resetFilters}
-            className="px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 text-sm sm:text-base"
+            className="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition duration-200"
           >
             Reset Filters
           </button>
         </div>
       </div>
 
-      {/* Bulk Actions */}
-      {selectedUsers.length > 0 && (
-        <div className="bg-white rounded-lg shadow p-4 mb-6">
-          <div className="relative inline-block text-left">
-            <button
-              id="bulk-actions-menu"
-              onClick={() => document.getElementById('bulk-actions-dropdown').classList.toggle('hidden')}
-              className="inline-flex justify-center items-center px-4 py-2 bg-[#243158] text-white rounded-md hover:bg-[#1e2a44] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#243158]"
-            >
-              Bulk Actions
-              <ChevronDown className="ml-2 w-4 h-4" />
-            </button>
-            <div
-              id="bulk-actions-dropdown"
-              className="hidden origin-top-right absolute right-0 mt-2 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-10"
-            >
-              <div className="py-1" role="menu" aria-orientation="vertical" aria-labelledby="bulk-actions-menu">
-                <button
-                  onClick={() => handleBulkApproval(true)}
-                  className="flex items-center w-full px-4 py-2 text-sm text-green-700 hover:bg-green-100 hover:text-green-900"
-                  role="menuitem"
-                >
-                  <CheckCircle className="w-4 h-4 mr-3" />
-                  Approve Selected
-                </button>
-                <button
-                  onClick={() => handleBulkApproval(false)}
-                  className="flex items-center w-full px-4 py-2 text-sm text-red-700 hover:bg-red-100 hover:text-red-900"
-                  role="menuitem"
-                >
-                  <XCircle className="w-4 h-4 mr-3" />
-                  Reject Selected
-                </button>
-                <button
-                  onClick={handleBulkDelete}
-                  className="flex items-center w-full px-4 py-2 text-sm text-red-700 hover:bg-red-100 hover:text-red-900"
-                  role="menuitem"
-                >
-                  <Trash2 className="w-4 h-4 mr-3" />
-                  Delete Selected
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Desktop Table View */}
-      <div className="hidden md:block bg-white rounded-lg shadow overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
+      <div className="hidden md:block bg-white rounded-lg shadow overflow-hidden">
+        <table className="min-w-full">
           <thead className="bg-gray-50">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 <input
                   type="checkbox"
-                  checked={currentUsers.length > 0 && selectedUsers.length === currentUsers.length}
+                  checked={selectedUsers.length === currentUsers.length && currentUsers.length > 0}
                   onChange={handleSelectAll}
                   className="h-4 w-4 text-[#243158] rounded focus:ring-[#243158] border-gray-300"
                 />
@@ -565,7 +486,6 @@ const Users = () => {
           </tbody>
         </table>
 
-        {/* Pagination */}
         <div className="bg-white p-3 text-gray-600 flex flex-col sm:flex-row justify-between items-center">
           <span className="text-sm md:text-base mb-2 md:mb-0">
             Showing {indexOfFirstItem + 1}-{Math.min(indexOfLastItem, filteredUsers.length)} of {filteredUsers.length}
@@ -594,7 +514,6 @@ const Users = () => {
         </div>
       </div>
 
-      {/* Mobile View - Attractive Cards */}
       <div className="md:hidden space-y-3">
         {loading ? (
           <div className="flex justify-center items-center py-8 bg-white rounded-lg shadow">
@@ -666,7 +585,6 @@ const Users = () => {
           </div>
         )}
 
-        {/* Pagination */}
         <div className="bg-white rounded-lg shadow p-3 text-gray-600 flex flex-col xs:flex-row justify-between items-center">
           <span className="text-sm sm:text-base mb-2 xs:mb-0">
             Showing {indexOfFirstItem + 1}-{Math.min(indexOfLastItem, filteredUsers.length)} of {filteredUsers.length}

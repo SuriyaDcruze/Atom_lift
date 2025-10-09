@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from 'react-toastify';
+import * as XLSX from 'xlsx';
 import LiftForm from '../Dashboard/Forms/LiftForm';
 import { Edit, Pencil, Trash2, RefreshCw, Search, ChevronDown, MoreVertical, Download, Upload, Import } from 'lucide-react';
 
@@ -75,6 +76,62 @@ const Lifts = () => {
     } catch (error) {
       console.error('Error importing lifts:', error);
       toast.error(error.response?.data?.error || 'Failed to import lifts.');
+      document.getElementById('options-dropdown').classList.add('hidden');
+    }
+  };
+
+  const handleImportXLSX = async (event) => {
+    const file = event.target.files[0];
+    if (!file) {
+      toast.error('Please select an XLSX file to import.');
+      return;
+    }
+
+    if (!file.name.endsWith('.xlsx') && !file.name.endsWith('.xls')) {
+      toast.error('Please select a valid XLSX file.');
+      return;
+    }
+
+    try {
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        try {
+          const data = new Uint8Array(e.target.result);
+          const workbook = XLSX.read(data, { type: 'array' });
+          const sheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[sheetName];
+          const jsonData = XLSX.utils.sheet_to_json(worksheet);
+
+          if (jsonData.length === 0) {
+            toast.error('No data found in the XLSX file.');
+            return;
+          }
+
+          // Convert XLSX data to the format expected by the API
+          const formData = new FormData();
+          formData.append('data', JSON.stringify(jsonData));
+
+          const token = localStorage.getItem('access_token');
+          await axios.post(`${apiBaseUrl}/auth/import-lifts-xlsx/`, formData, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+          });
+
+          toast.success('Lifts imported successfully from XLSX.');
+          fetchData(); // Refresh the lift data
+          document.getElementById('options-dropdown').classList.add('hidden');
+        } catch (error) {
+          console.error('Error processing XLSX file:', error);
+          toast.error('Failed to process XLSX file.');
+          document.getElementById('options-dropdown').classList.add('hidden');
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    } catch (error) {
+      console.error('Error importing XLSX:', error);
+      toast.error(error.response?.data?.error || 'Failed to import XLSX file.');
       document.getElementById('options-dropdown').classList.add('hidden');
     }
   };
@@ -431,6 +488,22 @@ const Lifts = () => {
                     className="hidden"
                     onChange={(e) => {
                       handleImportCSV(e);
+                      document.getElementById('options-dropdown').classList.add('hidden');
+                    }}
+                  />
+                </label>
+                <label
+                  className="flex w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 cursor-pointer"
+                  role="menuitem"
+                >
+                  <Upload className="mr-1 h-5 w-5 text-gray-400" />
+                  Import XLSX
+                  <input
+                    type="file"
+                    accept=".xlsx,.xls"
+                    className="hidden"
+                    onChange={(e) => {
+                      handleImportXLSX(e);
                       document.getElementById('options-dropdown').classList.add('hidden');
                     }}
                   />

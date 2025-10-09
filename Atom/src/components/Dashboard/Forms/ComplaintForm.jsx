@@ -1,12 +1,11 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { X, Edit, Trash2 } from 'lucide-react';
-import ErrorToast from '../messages/ErrorToast';
-import SuccessToast from '../messages/SuccessToast';
+import { toast } from 'react-toastify';
+import { X } from 'lucide-react'; // Removed Edit and Trash2 for now since modal is commented out
 
 const apiBaseUrl = import.meta.env.VITE_BASE_API;
 
-const ComplaintForm = ({ isEdit, initialData, onClose, onSubmitSuccess, onSubmitError, apiBaseUrl, dropdownOptions }) => {
+const ComplaintForm = ({ isEdit, initialData, onClose, onSubmitSuccess, onSubmitError, apiBaseUrl: propApiBaseUrl = apiBaseUrl, dropdownOptions }) => {
   const [formData, setFormData] = useState({
     reference: '',
     type: 'Service Request',
@@ -26,75 +25,47 @@ const ComplaintForm = ({ isEdit, initialData, onClose, onSubmitSuccess, onSubmit
   });
 
   const [customers, setCustomers] = useState([]);
-  const [employees, setEmployees] = useState([]);
-  const [employeeModal, setEmployeeModal] = useState({ isOpen: false, value: '', isEditing: false, editId: null });
+  const [salesmen, setSalesmen] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [optionsLoading, setOptionsLoading] = useState({ customers: true, employees: true });
-  const [alertMessage, setAlertMessage] = useState({
-    show: false,
-    type: '', // 'success' or 'error'
-    message: '',
-    description: ''
-  });
-
-  // Helper functions for showing alert messages
-  const showSuccessMessage = (message, description = '', autoHide = true) => {
-    setAlertMessage({
-      show: true,
-      type: 'success',
-      message,
-      description
-    });
-    // Auto-hide after 3 seconds only if autoHide is true
-    if (autoHide) {
-      setTimeout(() => {
-        setAlertMessage(prev => ({ ...prev, show: false }));
-      }, 3000);
-    }
-  };
-
-  const showErrorMessage = (message, description = '') => {
-    setAlertMessage({
-      show: true,
-      type: 'error',
-      message,
-      description
-    });
-    // Auto-hide after 5 seconds for errors
-    setTimeout(() => {
-      setAlertMessage(prev => ({ ...prev, show: false }));
-    }, 5000);
-  };
+  const [optionsLoading, setOptionsLoading] = useState({ customers: true, salesmen: true });
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         const token = localStorage.getItem('access_token');
         if (!token) {
-          showErrorMessage('Please log in to continue.');
+          toast.error('Please log in to continue.');
           window.location.href = '/login';
           return;
         }
 
+        console.log('Fetching data with token:', token.substring(0, 10) + '...');
+
         // Fetch customers
-        const customerResponse = await axios.get(`${apiBaseUrl}/sales/customer-list/`, {
+        const customerResponse = await axios.get(`${propApiBaseUrl}/sales/customer-list/`, {
           headers: { Authorization: `Bearer ${token}` },
         });
-        setCustomers(customerResponse.data);
+        console.log('Customers response:', customerResponse.data);
+        setCustomers(customerResponse.data || []);
         setOptionsLoading((prev) => ({ ...prev, customers: false }));
 
-        // Fetch employees
-        const employeeResponse = await axios.get(`${apiBaseUrl}/auth/employees/`, {
+        // Fetch salesmen (CustomUser with role='SALESMAN')
+        const usersResponse = await axios.get(`${propApiBaseUrl}/auth/list-users/`, {
           headers: { Authorization: `Bearer ${token}` },
         });
-        setEmployees(employeeResponse.data);
-        setOptionsLoading((prev) => ({ ...prev, employees: false }));
+        console.log('Users response:', usersResponse.data);
+        const allUsers = usersResponse.data || [];
+        const filteredSalesmen = allUsers.filter(user => user.role === 'SALESMAN');
+        setSalesmen(filteredSalesmen);
+        setOptionsLoading((prev) => ({ ...prev, salesmen: false }));
 
         // Fetch complaints to generate reference ID (only for create mode)
         if (!isEdit) {
-          const complaintResponse = await axios.get(`${apiBaseUrl}/auth/complaint-list/`, {
+          const complaintResponse = await axios.get(`${propApiBaseUrl}/auth/complaint-list/`, {
             headers: { Authorization: `Bearer ${token}` },
           });
+          console.log('Complaints response:', complaintResponse.data);
           const complaints = complaintResponse.data || [];
           let newRefId = 'CMP1001';
           if (complaints.length > 0) {
@@ -108,19 +79,21 @@ const ComplaintForm = ({ isEdit, initialData, onClose, onSubmitSuccess, onSubmit
           }));
         }
       } catch (error) {
-        console.error('Error fetching data:', error);
-        showErrorMessage('Failed to fetch data.');
-        setOptionsLoading((prev) => ({ ...prev, customers: false, employees: false }));
+        console.error('Error fetching data:', error.response || error);
+        const errorMsg = error.response?.data?.error || 'Failed to fetch data.';
+        toast.error(errorMsg);
+        setError(errorMsg);
+        setOptionsLoading((prev) => ({ ...prev, customers: false, salesmen: false }));
       }
     };
 
     fetchData();
-  }, [isEdit]);
+  }, [isEdit, propApiBaseUrl]);
 
   useEffect(() => {
-    if (!optionsLoading.customers && !optionsLoading.employees && isEdit && initialData) {
+    if (!optionsLoading.customers && !optionsLoading.salesmen && isEdit && initialData) {
       const selectedCustomer = customers.find(c => c.site_name === initialData.customer) || {};
-      const selectedEmployee = employees.find(e => e.name === initialData.assign_to?.name) || {};
+      const selectedSalesman = salesmen.find(s => s.id === initialData.assign_to) || {}; // Adjusted to match id
 
       setFormData({
         reference: initialData.reference || '',
@@ -130,7 +103,7 @@ const ComplaintForm = ({ isEdit, initialData, onClose, onSubmitSuccess, onSubmit
         contactPersonName: initialData.contact_person_name || selectedCustomer.contact_person_name || '',
         contactPersonMobile: initialData.contact_person_mobile || selectedCustomer.phone || '',
         blockWing: initialData.block_wing || selectedCustomer.site_address || '',
-        assignTo: selectedEmployee.id || '',
+        assignTo: selectedSalesman.id || '',
         priority: initialData.priority || 'Medium',
         subject: initialData.subject || '',
         message: initialData.message || '',
@@ -140,17 +113,17 @@ const ComplaintForm = ({ isEdit, initialData, onClose, onSubmitSuccess, onSubmit
         solution: initialData.solution || '',
       });
     }
-  }, [isEdit, initialData, customers, employees, optionsLoading.customers, optionsLoading.employees]);
+  }, [isEdit, initialData, customers, salesmen, optionsLoading.customers, optionsLoading.salesmen]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleCustomerChange = (e) => {
     const value = e.target.value;
-    const selected = customers.find(c => c.id === parseInt(value));
-    setFormData(prev => ({
+    const selected = customers.find((c) => c.id === parseInt(value));
+    setFormData((prev) => ({
       ...prev,
       customer: value,
       contactPersonName: selected ? selected.contact_person_name : '',
@@ -159,158 +132,118 @@ const ComplaintForm = ({ isEdit, initialData, onClose, onSubmitSuccess, onSubmit
     }));
   };
 
-  const openEmployeeModal = (isEditing = false, editId = null, editValue = '') => {
-    setEmployeeModal({ isOpen: true, value: editValue, isEditing, editId });
-  };
-
-  const closeEmployeeModal = () => {
-    setEmployeeModal({ isOpen: false, value: '', isEditing: false, editId: null });
-  };
-
-  const handleAddEmployee = async () => {
-    const value = employeeModal.value.trim();
-    if (!value) {
-      showErrorMessage('Please enter an employee name.');
-      return;
-    }
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
 
     try {
-      setLoading(true);
       const token = localStorage.getItem('access_token');
-      const isEditing = employeeModal.isEditing;
-      const editId = employeeModal.editId;
-
-      let response;
-      if (isEditing) {
-        response = await axios.put(`${apiBaseUrl}/auth/edit-employee/${editId}/`, { name: value }, { headers: { Authorization: `Bearer ${token}` } });
-        showSuccessMessage('Employee updated successfully.');
-      } else {
-        response = await axios.post(`${apiBaseUrl}/auth/add-employee/`, { name: value }, { headers: { Authorization: `Bearer ${token}` } });
-        showSuccessMessage('Employee added successfully.');
-        setFormData(prev => ({ ...prev, assignTo: response.data.id }));
+      if (!token) {
+        toast.error('Please log in to continue.');
+        window.location.href = '/login';
+        return;
       }
 
-      // Refresh employees list
-      const employeesResponse = await axios.get(`${apiBaseUrl}/auth/employees/`, { headers: { Authorization: `Bearer ${token}` } });
-      setEmployees(employeesResponse.data);
-      closeEmployeeModal();
+      const submitData = {
+        type: formData.type,
+        date: formData.date,
+        customer: formData.customer ? parseInt(formData.customer) : null,
+        contact_person_name: formData.contactPersonName,
+        contact_person_mobile: formData.contactPersonMobile,
+        block_wing: formData.blockWing,
+        assign_to: formData.assignTo ? parseInt(formData.assignTo) : null,
+        priority: formData.priority,
+        subject: formData.subject,
+        message: formData.message,
+        customer_signature: formData.customerSignature,
+        technician_remark: formData.technicianRemark,
+        technician_signature: formData.technicianSignature,
+        solution: formData.solution,
+      };
+
+      console.log('Submitting data:', submitData); // Debug log
+
+      if (isEdit && initialData?.id) {
+        const response = await axios.put(`${propApiBaseUrl}/auth/edit-complaint/${initialData.id}/`, submitData, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        toast.success('Complaint updated successfully.');
+        onSubmitSuccess?.(response.data);
+      } else {
+        const response = await axios.post(`${propApiBaseUrl}/auth/add-complaint/`, submitData, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        toast.success('Complaint created successfully.');
+        onSubmitSuccess?.(response.data);
+      }
+
+      onClose();
     } catch (error) {
-      console.error('Error handling employee:', error);
-      showErrorMessage(error.response?.data?.error || `Failed to ${employeeModal.isEditing ? 'update' : 'add'} employee.`);
+      console.error('Error submitting complaint:', error.response || error); // Debug log
+      const errorMsg = error.response?.data?.error || error.response?.data?.non_field_errors?.[0] || 'Failed to submit complaint.';
+      toast.error(errorMsg);
+      onSubmitError?.(error);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDeleteEmployee = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this employee?')) return;
+  // Fallback rendering if data is loading or errored
+  if (optionsLoading.customers || optionsLoading.salesmen) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-xl shadow-2xl p-6 text-center">
+          <p>Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
-    try {
-      const token = localStorage.getItem('access_token');
-      await axios.delete(`${apiBaseUrl}/auth/delete-employee/${id}/`, { headers: { Authorization: `Bearer ${token}` } });
-      showSuccessMessage('Employee deleted successfully.');
-
-      // Refresh employees list
-      const employeesResponse = await axios.get(`${apiBaseUrl}/auth/employees/`, { headers: { Authorization: `Bearer ${token}` } });
-      setEmployees(employeesResponse.data);
-    } catch (error) {
-      console.error('Error deleting employee:', error);
-      showErrorMessage(error.response?.data?.error || 'Failed to delete employee.');
-    }
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      const token = localStorage.getItem('access_token');
-      const url = isEdit
-        ? `${apiBaseUrl}/auth/edit-complaint/${initialData.id}/`
-        : `${apiBaseUrl}/auth/add-complaint/`;
-      const method = isEdit ? 'put' : 'post';
-
-      await axios({
-        method,
-        url,
-        headers: { Authorization: `Bearer ${token}` },
-        data: {
-          ...formData,
-          customer: formData.customer || null,
-          assign_to: formData.assignTo || null,
-        },
-      });
-
-      showSuccessMessage(isEdit ? 'Complaint updated successfully!' : 'Complaint created successfully!', '', false);
-      
-      // Wait for the success message to be visible before closing
-      setTimeout(() => {
-        onSubmitSuccess(isEdit ? 'Complaint updated successfully!' : 'Complaint created successfully!');
-        onClose();
-      }, 2000);
-    } catch (error) {
-      console.error('Error submitting complaint:', error);
-      onSubmitError(error.response?.data?.error || (isEdit ? 'Failed to update complaint' : 'Failed to create complaint'));
-    }
-  };
+  if (error) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-xl shadow-2xl p-6 text-center text-red-500">
+          <p>Error: {error}</p>
+          <button onClick={onClose} className="mt-4 px-4 py-2 bg-gray-300 rounded">Close</button>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="fixed inset-0 bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-3xl overflow-hidden">
-        {/* Modal Header */}
-        <div className="bg-gradient-to-r from-[#2D3A6B] to-[#243158] p-6">
-          <h2 className="text-2xl font-bold text-white">
-            {isEdit ? 'Edit Complaint' : 'Create Complaint'}
-          </h2>
-          <p className="text-white">
-            Fill in all required fields (<span className="text-red-300">*</span>)
-          </p>
-        </div>
-        
-        {/* Alert Messages */}
-        {alertMessage.show && (
-          <div className="fixed bottom-4 right-4 z-[60] max-w-sm animate-in slide-in-from-right-2 duration-300">
-            {alertMessage.type === 'success' ? (
-              <SuccessToast 
-                message={alertMessage.message} 
-                description={alertMessage.description}
-                autoClose={3000}
-                onClose={() => setAlertMessage(prev => ({ ...prev, show: false }))}
-              />
-            ) : (
-              <ErrorToast 
-                message={alertMessage.message} 
-                description={alertMessage.description}
-                autoClose={5000}
-                onClose={() => setAlertMessage(prev => ({ ...prev, show: false }))}
-              />
-            )}
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl overflow-hidden">
+        <form onSubmit={handleSubmit} className="h-full flex flex-col">
+          {/* Modal Header */}
+          <div className="bg-gradient-to-r from-[#2D3A6B] to-[#243158] px-6 py-4 text-white flex justify-between items-center">
+            <h3 className="text-xl font-semibold">{isEdit ? 'Edit Complaint' : 'New Complaint'}</h3>
+            <button type="button" onClick={onClose} className="text-white hover:text-gray-200 transition-colors">
+              <X className="w-6 h-6" />
+            </button>
           </div>
-        )}
-        
-        {/* Modal Body */}
-        <form onSubmit={handleSubmit}>
+
+          {/* Modal Body */}
           <div className="p-6 max-h-[70vh] overflow-y-auto">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Left Column */}
               <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-gray-800 border-b pb-2">Complaint Details</h3>
                 {/* Reference */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    REFERENCE <span className="text-red-500">*</span>
+                    REFERENCE ID <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
                     name="reference"
                     value={formData.reference}
-                    onChange={handleChange}
-                    className="block w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                     readOnly
+                    className="block w-full px-4 py-2.5 rounded-lg border border-gray-300 bg-gray-50 text-gray-700"
                   />
                 </div>
-                {/* Complaint Type */}
+                {/* Type */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    COMPLAINT TYPE <span className="text-red-500">*</span>
+                    TYPE <span className="text-red-500">*</span>
                   </label>
                   <select
                     name="type"
@@ -343,13 +276,14 @@ const ComplaintForm = ({ isEdit, initialData, onClose, onSubmitSuccess, onSubmit
                 {/* Customer */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    CUSTOMER
+                    CUSTOMER <span className="text-red-500">*</span>
                   </label>
                   <select
                     name="customer"
                     value={formData.customer}
                     onChange={handleCustomerChange}
                     className="block w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                    required
                   >
                     <option value="">Select Customer</option>
                     {customers.map((customer) => (
@@ -378,13 +312,17 @@ const ComplaintForm = ({ isEdit, initialData, onClose, onSubmitSuccess, onSubmit
                     CONTACT PERSON MOBILE
                   </label>
                   <input
-                    type="text"
+                    type="tel"
                     name="contactPersonMobile"
                     value={formData.contactPersonMobile}
                     onChange={handleChange}
                     className="block w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                   />
                 </div>
+              </div>
+
+              {/* Right Column */}
+              <div className="space-y-4">
                 {/* Block/Wing */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -398,48 +336,36 @@ const ComplaintForm = ({ isEdit, initialData, onClose, onSubmitSuccess, onSubmit
                     className="block w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                   />
                 </div>
-              </div>
-              {/* Right Column */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-gray-800 border-b pb-2">Assignment & Details</h3>
-                {/* Assign To */}
+                {/* Assign To (Salesman) */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    ASSIGN TO
+                    ASSIGN TO (SALESMAN)
                   </label>
-                  <div className="flex items-center space-x-2">
-                    <select
-                      name="assignTo"
-                      value={formData.assignTo}
-                      onChange={handleChange}
-                      className="block w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                    >
-                      <option value="">Select Employee</option>
-                      {employees.map((employee) => (
-                        <option key={employee.id} value={employee.id}>
-                          {employee.name}
-                        </option>
-                      ))}
-                    </select>
-                    <button
-                      type="button"
-                      onClick={() => openEmployeeModal()}
-                      className="px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-all duration-200"
-                    >
-                      +
-                    </button>
-                  </div>
+                  <select
+                    name="assignTo"
+                    value={formData.assignTo}
+                    onChange={handleChange}
+                    className="block w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                  >
+                    <option value="">Select Salesman</option>
+                    {salesmen.map((salesman) => (
+                      <option key={salesman.id} value={salesman.id}>
+                        {salesman.username}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 {/* Priority */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    PRIORITY
+                    PRIORITY <span className="text-red-500">*</span>
                   </label>
                   <select
                     name="priority"
                     value={formData.priority}
                     onChange={handleChange}
                     className="block w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                    required
                   >
                     <option value="Urgent">Urgent</option>
                     <option value="High">High</option>
@@ -461,7 +387,7 @@ const ComplaintForm = ({ isEdit, initialData, onClose, onSubmitSuccess, onSubmit
                   />
                 </div>
                 {/* Message */}
-                <div>
+                <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     MESSAGE
                   </label>
@@ -471,76 +397,78 @@ const ComplaintForm = ({ isEdit, initialData, onClose, onSubmitSuccess, onSubmit
                     onChange={handleChange}
                     className="block w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                     rows="3"
-                    placeholder="Additional notes..."
-                  />
-                </div>
-                {/* Customer Signature */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    CUSTOMER SIGNATURE
-                  </label>
-                  <textarea
-                    name="customerSignature"
-                    value={formData.customerSignature}
-                    onChange={handleChange}
-                    className="block w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                    rows="2"
-                    placeholder="Additional notes..."
-                  />
-                </div>
-                {/* Technician Remark */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    TECHNICIAN REMARK
-                  </label>
-                  <textarea
-                    name="technicianRemark"
-                    value={formData.technicianRemark}
-                    onChange={handleChange}
-                    className="block w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                    rows="2"
-                    placeholder="Additional notes..."
-                  />
-                </div>
-                {/* Technician Signature */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    TECHNICIAN SIGNATURE
-                  </label>
-                  <textarea
-                    name="technicianSignature"
-                    value={formData.technicianSignature}
-                    onChange={handleChange}
-                    className="block w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                    rows="2"
-                    placeholder="Additional notes..."
-                  />
-                </div>
-                {/* Solution */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    SOLUTION
-                  </label>
-                  <textarea
-                    name="solution"
-                    value={formData.solution}
-                    onChange={handleChange}
-                    className="block w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                    rows="2"
-                    placeholder="Additional notes..."
+                    placeholder="Describe the issue..."
                   />
                 </div>
               </div>
             </div>
+
+            {/* Signatures and Resolution Section */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Customer Signature */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  CUSTOMER SIGNATURE
+                </label>
+                <textarea
+                  name="customerSignature"
+                  value={formData.customerSignature}
+                  onChange={handleChange}
+                  className="block w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                  rows="2"
+                  placeholder="Additional notes..."
+                />
+              </div>
+              {/* Technician Remark */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  TECHNICIAN REMARK
+                </label>
+                <textarea
+                  name="technicianRemark"
+                  value={formData.technicianRemark}
+                  onChange={handleChange}
+                  className="block w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                  rows="2"
+                  placeholder="Additional notes..."
+                />
+              </div>
+              {/* Technician Signature */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  TECHNICIAN SIGNATURE
+                </label>
+                <textarea
+                  name="technicianSignature"
+                  value={formData.technicianSignature}
+                  onChange={handleChange}
+                  className="block w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                  rows="2"
+                  placeholder="Additional notes..."
+                />
+              </div>
+              {/* Solution */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  SOLUTION
+                </label>
+                <textarea
+                  name="solution"
+                  value={formData.solution}
+                  onChange={handleChange}
+                  className="block w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                  rows="2"
+                  placeholder="Additional notes..."
+                />
+              </div>
+            </div>
           </div>
+
           {/* Modal Footer */}
           <div className="bg-gray-50 px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
             <button
               type="button"
-              onClick={() => {
-                setAlertMessage({ show: false, type: '', message: '', description: '' });
-                onClose();
-              }}
+              onClick={onClose}
               className="px-6 py-2.5 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-100 transition-all duration-200"
             >
               Cancel
@@ -555,84 +483,6 @@ const ComplaintForm = ({ isEdit, initialData, onClose, onSubmitSuccess, onSubmit
           </div>
         </form>
       </div>
-
-      {employeeModal.isOpen && (
-        <div className="fixed inset-0 bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl p-6">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">
-              {employeeModal.isEditing ? 'Edit Employee' : 'Add New Employee'}
-            </h3>
-            <input
-              type="text"
-              value={employeeModal.value}
-              onChange={(e) => setEmployeeModal(prev => ({ ...prev, value: e.target.value }))}
-              className="block w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 mb-4"
-              placeholder="Enter employee name"
-            />
-            <div className="mb-4">
-              <h4 className="text-sm font-medium text-gray-700 mb-2">Existing Employees</h4>
-              <div className="max-h-40 overflow-y-auto border border-gray-200 rounded-lg">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="bg-gray-100 text-gray-700">
-                      <th className="p-2 text-left">Name</th>
-                      <th className="p-2 text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {employees.length > 0 ? (
-                      employees.map((option) => (
-                        <tr key={option.id} className="border-t">
-                          <td className="p-2">{option.name}</td>
-                          <td className="p-2 text-right">
-                            <button
-                              onClick={() => openEmployeeModal(true, option.id, option.name)}
-                              className="text-blue-500 hover:text-blue-700 mr-2"
-                              title="Edit"
-                            >
-                              <Edit className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => handleDeleteEmployee(option.id)}
-                              className="text-red-500 hover:text-red-700"
-                              title="Delete"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </td>
-                        </tr>
-                      ))
-                    ) : (
-                      <tr>
-                        <td colSpan="2" className="p-2 text-center text-gray-500">
-                          No employees found
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-            <div className="flex justify-end space-x-3">
-              <button
-                onClick={closeEmployeeModal}
-                className="px-6 py-2.5 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-100 transition-all duration-200"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleAddEmployee}
-                disabled={!employeeModal.value.trim() || loading}
-                className={`px-6 py-2.5 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg text-white font-medium transition-all duration-200 ${
-                  !employeeModal.value.trim() || loading ? 'opacity-50 cursor-not-allowed' : 'hover:from-blue-600 hover:to-blue-700'
-                }`}
-              >
-                {loading ? 'Saving...' : employeeModal.isEditing ? 'Update Employee' : 'Add Employee'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

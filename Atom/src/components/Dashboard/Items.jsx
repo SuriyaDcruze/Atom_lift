@@ -4,6 +4,7 @@ import NewItemForm from '../Dashboard/Forms/NewItemForm';
 import { MoreVertical, Edit, Trash2, Download, Upload } from 'lucide-react';
 import axios from 'axios';
 import { toast } from 'react-toastify';
+import * as XLSX from 'xlsx';
 
 const apiBaseUrl = import.meta.env.VITE_BASE_API;
 
@@ -164,6 +165,60 @@ const Items = () => {
     }
   };
 
+  const handleImportXLSX = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      toast.error('Please select an XLSX file.');
+      return;
+    }
+    if (!file.name.endsWith('.xlsx') && !file.name.endsWith('.xls')) {
+      toast.error('File must be .xlsx or .xls.');
+      return;
+    }
+
+    try {
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        try {
+          const data = new Uint8Array(e.target.result);
+          const workbook = XLSX.read(data, { type: 'array' });
+          const sheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[sheetName];
+          const jsonData = XLSX.utils.sheet_to_json(worksheet);
+
+          if (!Array.isArray(jsonData) || jsonData.length === 0) {
+            toast.error('No data found in the XLSX file.');
+            return;
+          }
+
+          await axios.post(
+            `${apiBaseUrl}/auth/import-items-xlsx/`,
+            { data: jsonData },
+            {
+              headers: {
+                Authorization: `Bearer ${localStorage.getItem('access_token')}`,
+                'Content-Type': 'application/json',
+              },
+            }
+          );
+
+          toast.success('Items imported successfully from XLSX!');
+          fetchItems();
+          setShowDropdown(false);
+        } catch (err) {
+          console.error('Error processing XLSX:', err);
+          toast.error('Failed to process XLSX file.');
+          setShowDropdown(false);
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    } catch (error) {
+      console.error('Error importing XLSX:', error);
+      toast.error(error.response?.data?.error || 'Failed to import XLSX.');
+      setShowDropdown(false);
+    }
+  };
+
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
       <div className="flex flex-col md:flex-row justify-between items-center mb-6">
@@ -191,6 +246,15 @@ const Items = () => {
                     type="file"
                     accept=".csv"
                     onChange={(e) => { handleImport(e); setShowDropdown(false); }}
+                    className="hidden"
+                  />
+                </label>
+                <label className="flex items-center w-full px-4 py-2 text-gray-700 hover:bg-gray-100 cursor-pointer">
+                  <Upload size={16} className="mr-2" /> Import XLSX
+                  <input
+                    type="file"
+                    accept=".xlsx,.xls"
+                    onChange={(e) => { handleImportXLSX(e); }}
                     className="hidden"
                   />
                 </label>

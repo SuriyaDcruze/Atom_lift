@@ -60,6 +60,7 @@ import QuotationReport from './components/Dashboard/QuotationReport';
 import ExpiringReport from './components/Dashboard/ExpiringReport';
 import No_Of_Expired_Free_Waranty from './components/Dashboard/No_Of_Expired_Free_Waranty';
 import User from './components/Dashboard/User';
+import CreateUser from './components/Dashboard/CreateUser';
 
 // Home component
 import Home from './components/Homepage/Home'; // Assuming Home component exists
@@ -143,6 +144,7 @@ function App() {
           <Route path="/dashboard/expiring-report" element={<ExpiringReport />} />
           <Route path="/dashboard/expired-free-warranty-report" element={<No_Of_Expired_Free_Waranty />} />
           <Route path="/dashboard/user" element={<User />} />
+          <Route path="/dashboard/create-user" element={<CreateUser />} />
         </Route>
 
         {/* Authentication routes */}
