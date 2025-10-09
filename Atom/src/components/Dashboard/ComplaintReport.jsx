@@ -215,18 +215,19 @@ const ComplaintsReport = () => {
   const totalPages = Math.ceil(filteredComplaints.length / itemsPerPage);
 
   return (
-    <div className="p-4 md:p-6 bg-gray-50 min-h-screen">
+    <div className="p-3 sm:p-4 md:p-6 bg-gray-50 min-h-screen">
       <div className="max-w-7xl mx-auto">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
-          <h1 className="text-2xl font-bold text-gray-800">Complaints Report</h1>
-          <div className="mt-4 md:mt-0 flex flex-wrap gap-2">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 sm:mb-6">
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-800 mb-3 sm:mb-0">Complaints Report</h1>
+          <div className="flex flex-wrap gap-2">
             <div className="relative">
               <button 
-                className="flex items-center bg-white border rounded-md px-3 py-2 text-sm hover:bg-gray-50"
+                className="flex items-center bg-white border rounded-md px-3 py-2 text-sm hover:bg-gray-50 transition-colors"
                 style={{ borderColor: primaryColor, color: primaryColor }}
                 onClick={() => setShowExportMenu(!showExportMenu)}
               >
                 <MoreVertical className="h-4 w-4" />
+                <span className="ml-2 hidden sm:inline">Export</span>
               </button>
               
               {showExportMenu && (
@@ -268,93 +269,97 @@ const ComplaintsReport = () => {
         </div>
 
         {/* Filters */}
-        <div className="bg-white rounded-lg border border-gray-200 p-4 mb-4 flex flex-col sm:flex-row gap-2 items-center justify-between flex-wrap">
-          <div className="flex flex-col w-full sm:w-40">
-            <label className="mb-1 text-xs text-gray-500 font-medium" htmlFor="period-select">
-              Period
-            </label>
-            <select
-              id="period-select"
-              className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#243158] w-full"
-              value={filters.period}
-              onChange={handleFilterChange}
-              name="period"
-            >
-              {periodOptions.map((option) => (
-                <option key={option} value={option}>
-                  {option.replace('_', ' ')}
-                </option>
-              ))}
-            </select>
+        <div className="bg-white rounded-lg border border-gray-200 p-3 sm:p-4 mb-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4">
+            <div className="flex flex-col">
+              <label className="mb-1 text-xs sm:text-sm text-gray-500 font-medium" htmlFor="period-select">
+                Period
+              </label>
+              <select
+                id="period-select"
+                className="px-3 py-2 sm:py-3 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#243158] w-full"
+                value={filters.period}
+                onChange={handleFilterChange}
+                name="period"
+              >
+                {periodOptions.map((option) => (
+                  <option key={option} value={option}>
+                    {option.replace('_', ' ')}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex flex-col">
+              <label className="mb-1 text-xs sm:text-sm text-gray-500 font-medium" htmlFor="by-select">
+                By
+              </label>
+              <select
+                id="by-select"
+                className="px-3 py-2 sm:py-3 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#243158] w-full"
+                value={filters.by}
+                onChange={handleFilterChange}
+                name="by"
+              >
+                {byOptions.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex flex-col">
+              <label className="mb-1 text-xs sm:text-sm text-gray-500 font-medium" htmlFor="customer-select">
+                Customer
+              </label>
+              <select
+                id="customer-select"
+                className="px-3 py-2 sm:py-3 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#243158] w-full"
+                value={filters.customer}
+                onChange={handleFilterChange}
+                name="customer"
+              >
+                <option value="ALL">ALL</option>
+                {customerOptions.map((option, index) => (
+                  <option key={`${option}-${index}`} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex flex-col">
+              <label className="mb-1 text-xs sm:text-sm text-gray-500 font-medium" htmlFor="status-select">
+                Status
+              </label>
+              <select
+                id="status-select"
+                className="px-3 py-2 sm:py-3 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#243158] w-full"
+                value={filters.status}
+                onChange={handleFilterChange}
+                name="status"
+              >
+                {statusOptions.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
-          <div className="flex flex-col w-full sm:w-40">
-            <label className="mb-1 text-xs text-gray-500 font-medium" htmlFor="by-select">
-              By
-            </label>
-            <select
-              id="by-select"
-              className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#243158] w-full"
-              value={filters.by}
-              onChange={handleFilterChange}
-              name="by"
+          <div className="flex justify-center sm:justify-end">
+            <button
+              className="bg-[#243158] hover:bg-[#1b2545] text-white px-4 py-2 sm:py-3 rounded-md text-sm flex items-center transition-colors w-full sm:w-auto"
+              onClick={resetFilters}
             >
-              {byOptions.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </select>
+              <Search className="inline mr-2 h-4 w-4" />
+              Search
+            </button>
           </div>
-          <div className="flex flex-col w-full sm:w-40">
-            <label className="mb-1 text-xs text-gray-500 font-medium" htmlFor="customer-select">
-              Customer
-            </label>
-            <select
-              id="customer-select"
-              className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#243158] w-full"
-              value={filters.customer}
-              onChange={handleFilterChange}
-              name="customer"
-            >
-              <option value="ALL">ALL</option>
-              {customerOptions.map((option, index) => (
-                <option key={`${option}-${index}`} value={option}>
-                  {option}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="flex flex-col w-full sm:w-40">
-            <label className="mb-1 text-xs text-gray-500 font-medium" htmlFor="status-select">
-              Status
-            </label>
-            <select
-              id="status-select"
-              className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#243158] w-full"
-              value={filters.status}
-              onChange={handleFilterChange}
-              name="status"
-            >
-              {statusOptions.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </select>
-          </div>
-          <button
-            className="bg-[#243158] hover:bg-[#1b2545] text-white px-4 py-2 rounded-md text-sm flex items-center mt-4 sm:mt-0"
-            onClick={resetFilters}
-          >
-            <Search className="inline mr-2 h-4 w-4" />
-            Search
-          </button>
         </div>
 
-        {/* Complaints Table */}
+        {/* Complaints Table/Cards */}
         <div className="bg-white rounded-lg shadow overflow-hidden">
-          {/* Table Header */}
-          <div className="grid grid-cols-12 bg-gray-100 p-3 font-medium text-gray-700 text-sm border-b border-gray-200">
+          {/* Desktop Table Header - Hidden on mobile */}
+          <div className="hidden lg:grid grid-cols-12 bg-gray-100 p-3 font-medium text-gray-700 text-sm border-b border-gray-200">
             <div className="px-2">COMPLAINT NO</div>
             <div className="px-2">DATE</div>
             <div className="px-2">AMC ID</div>
@@ -369,54 +374,133 @@ const ComplaintsReport = () => {
             <div className="px-2">PRINT</div>
           </div>
           
-          {/* Table Rows */}
+          {/* Loading State */}
           {loading ? (
             <div className="p-4 text-center text-gray-500">
               Loading complaints...
             </div>
           ) : filteredComplaints.length > 0 ? (
             currentComplaints.map((complaint, index) => (
-              <div key={index} className="grid grid-cols-12 p-3 border-b border-gray-200 text-sm items-center">
-                <div className="px-2 font-medium">{complaint.complaintNo}</div>
-                <div className="px-2">{complaint.date}</div>
-                <div className="px-2">{complaint.amcId}</div>
-                <div className="px-2">{complaint.siteId}</div>
-                <div className="px-2">{complaint.customer}</div>
-                <div className="px-2">
-                  <span className={`px-2 py-1 rounded-full text-xs ${
-                    complaint.type === 'Electrical' ? 'bg-blue-100 text-blue-800' : 
-                    'bg-gray-100 text-gray-800'
-                  }`}>
-                    {complaint.type}
-                  </span>
-                </div>
-                <div className="px-2">{complaint.problem}</div>
-                <div className="px-2">{complaint.resolution}</div>
-                <div className="px-2">{complaint.doneBy}</div>
-                <div className="px-2">
-                  <span className={`px-2 py-1 rounded-full text-xs ${
-                    complaint.status === 'Closed' ? 'bg-green-100 text-green-800' : 
-                    complaint.status === 'In Progress' ? 'bg-purple-100 text-purple-800' :
-                    complaint.status === 'Open' ? 'bg-yellow-100 text-yellow-800' :
-                    'bg-gray-100 text-gray-800'
-                  }`}>
-                    {complaint.status}
-                  </span>
-                </div>
-                <div className="px-2">
-                  {complaint.status !== 'Closed' && (
-                    <button className="p-1 text-green-600 hover:bg-green-50 rounded">
-                      <Check className="h-4 w-4" />
+              <div key={index}>
+                {/* Desktop Table Row */}
+                <div className="hidden lg:grid grid-cols-12 p-3 border-b border-gray-200 text-sm items-center">
+                  <div className="px-2 font-medium">{complaint.complaintNo}</div>
+                  <div className="px-2">{complaint.date}</div>
+                  <div className="px-2">{complaint.amcId}</div>
+                  <div className="px-2">{complaint.siteId}</div>
+                  <div className="px-2">{complaint.customer}</div>
+                  <div className="px-2">
+                    <span className={`px-2 py-1 rounded-full text-xs ${
+                      complaint.type === 'Electrical' ? 'bg-blue-100 text-blue-800' : 
+                      'bg-gray-100 text-gray-800'
+                    }`}>
+                      {complaint.type}
+                    </span>
+                  </div>
+                  <div className="px-2">{complaint.problem}</div>
+                  <div className="px-2">{complaint.resolution}</div>
+                  <div className="px-2">{complaint.doneBy}</div>
+                  <div className="px-2">
+                    <span className={`px-2 py-1 rounded-full text-xs ${
+                      complaint.status === 'Closed' ? 'bg-green-100 text-green-800' : 
+                      complaint.status === 'In Progress' ? 'bg-purple-100 text-purple-800' :
+                      complaint.status === 'Open' ? 'bg-yellow-100 text-yellow-800' :
+                      'bg-gray-100 text-gray-800'
+                    }`}>
+                      {complaint.status}
+                    </span>
+                  </div>
+                  <div className="px-2">
+                    {complaint.status !== 'Closed' && (
+                      <button className="p-1 text-green-600 hover:bg-green-50 rounded">
+                        <Check className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
+                  <div className="px-2">
+                    <button 
+                      className="p-1 text-blue-600 hover:bg-blue-50 rounded"
+                      onClick={() => handlePrintComplaint(complaint.id)}
+                    >
+                      <Printer className="h-4 w-4" />
                     </button>
-                  )}
+                  </div>
                 </div>
-                <div className="px-2">
-                  <button 
-                    className="p-1 text-blue-600 hover:bg-blue-50 rounded"
-                    onClick={() => handlePrintComplaint(complaint.id)}
-                  >
-                    <Printer className="h-4 w-4" />
-                  </button>
+
+                {/* Mobile Card Layout */}
+                <div className="lg:hidden p-4 border-b border-gray-200">
+                  <div className="space-y-3">
+                    {/* Header Row */}
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h3 className="font-semibold text-gray-900 text-sm">#{complaint.complaintNo}</h3>
+                        <p className="text-xs text-gray-500">{complaint.date}</p>
+                      </div>
+                      <div className="flex gap-2">
+                        {complaint.status !== 'Closed' && (
+                          <button className="p-1 text-green-600 hover:bg-green-50 rounded">
+                            <Check className="h-4 w-4" />
+                          </button>
+                        )}
+                        <button 
+                          className="p-1 text-blue-600 hover:bg-blue-50 rounded"
+                          onClick={() => handlePrintComplaint(complaint.id)}
+                        >
+                          <Printer className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Customer & Status */}
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">{complaint.customer}</p>
+                        <p className="text-xs text-gray-500">Done by: {complaint.doneBy}</p>
+                      </div>
+                      <span className={`px-2 py-1 rounded-full text-xs ${
+                        complaint.status === 'Closed' ? 'bg-green-100 text-green-800' : 
+                        complaint.status === 'In Progress' ? 'bg-purple-100 text-purple-800' :
+                        complaint.status === 'Open' ? 'bg-yellow-100 text-yellow-800' :
+                        'bg-gray-100 text-gray-800'
+                      }`}>
+                        {complaint.status}
+                      </span>
+                    </div>
+
+                    {/* AMC & Site IDs */}
+                    <div className="grid grid-cols-2 gap-4 text-xs">
+                      <div>
+                        <span className="text-gray-500">AMC ID:</span>
+                        <span className="ml-1 font-medium">{complaint.amcId}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">Site ID:</span>
+                        <span className="ml-1 font-medium">{complaint.siteId}</span>
+                      </div>
+                    </div>
+
+                    {/* Type */}
+                    <div>
+                      <span className={`px-2 py-1 rounded-full text-xs ${
+                        complaint.type === 'Electrical' ? 'bg-blue-100 text-blue-800' : 
+                        'bg-gray-100 text-gray-800'
+                      }`}>
+                        {complaint.type}
+                      </span>
+                    </div>
+
+                    {/* Problem */}
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">Problem:</p>
+                      <p className="text-sm text-gray-900">{complaint.problem}</p>
+                    </div>
+
+                    {/* Resolution */}
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">Resolution:</p>
+                      <p className="text-sm text-gray-900">{complaint.resolution}</p>
+                    </div>
+                  </div>
                 </div>
               </div>
             ))
@@ -427,7 +511,7 @@ const ComplaintsReport = () => {
           )}
 
           {/* Pagination */}
-          <div className="p-3 text-sm text-gray-600 border-t border-gray-200">
+          <div className="p-3 text-xs sm:text-sm text-gray-600 border-t border-gray-200">
             Showing {filteredComplaints.length === 0 ? 0 : indexOfFirstItem + 1} to{' '}
             {Math.min(indexOfLastItem, filteredComplaints.length)} of {filteredComplaints.length} entries
           </div>
