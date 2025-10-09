@@ -231,7 +231,7 @@ const ComplaintsReport = () => {
               </button>
               
               {showExportMenu && (
-                <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10 border border-gray-200">
+                <div className="absolute right-0 sm:right-0 left-0 sm:left-auto mt-2 w-48 bg-white rounded-md shadow-lg z-10 border border-gray-200">
                   <div className="py-1">
                     <button 
                       onClick={() => handleExport('copy')}
@@ -273,86 +273,86 @@ const ComplaintsReport = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4">
             <div className="flex flex-col">
               <label className="mb-1 text-xs sm:text-sm text-gray-500 font-medium" htmlFor="period-select">
-                Period
-              </label>
-              <select
-                id="period-select"
+              Period
+            </label>
+            <select
+              id="period-select"
                 className="px-3 py-2 sm:py-3 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#243158] w-full"
-                value={filters.period}
-                onChange={handleFilterChange}
-                name="period"
-              >
-                {periodOptions.map((option) => (
-                  <option key={option} value={option}>
-                    {option.replace('_', ' ')}
-                  </option>
-                ))}
-              </select>
-            </div>
+              value={filters.period}
+              onChange={handleFilterChange}
+              name="period"
+            >
+              {periodOptions.map((option) => (
+                <option key={option} value={option}>
+                  {option.replace('_', ' ')}
+                </option>
+              ))}
+            </select>
+          </div>
             <div className="flex flex-col">
               <label className="mb-1 text-xs sm:text-sm text-gray-500 font-medium" htmlFor="by-select">
-                By
-              </label>
-              <select
-                id="by-select"
+              By
+            </label>
+            <select
+              id="by-select"
                 className="px-3 py-2 sm:py-3 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#243158] w-full"
-                value={filters.by}
-                onChange={handleFilterChange}
-                name="by"
-              >
-                {byOptions.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
-            </div>
+              value={filters.by}
+              onChange={handleFilterChange}
+              name="by"
+            >
+              {byOptions.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
+          </div>
             <div className="flex flex-col">
               <label className="mb-1 text-xs sm:text-sm text-gray-500 font-medium" htmlFor="customer-select">
-                Customer
-              </label>
-              <select
-                id="customer-select"
+              Customer
+            </label>
+            <select
+              id="customer-select"
                 className="px-3 py-2 sm:py-3 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#243158] w-full"
-                value={filters.customer}
-                onChange={handleFilterChange}
-                name="customer"
-              >
-                <option value="ALL">ALL</option>
-                {customerOptions.map((option, index) => (
-                  <option key={`${option}-${index}`} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
-            </div>
+              value={filters.customer}
+              onChange={handleFilterChange}
+              name="customer"
+            >
+              <option value="ALL">ALL</option>
+              {customerOptions.map((option, index) => (
+                <option key={`${option}-${index}`} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
+          </div>
             <div className="flex flex-col">
               <label className="mb-1 text-xs sm:text-sm text-gray-500 font-medium" htmlFor="status-select">
-                Status
-              </label>
-              <select
-                id="status-select"
+              Status
+            </label>
+            <select
+              id="status-select"
                 className="px-3 py-2 sm:py-3 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#243158] w-full"
-                value={filters.status}
-                onChange={handleFilterChange}
-                name="status"
-              >
-                {statusOptions.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
-            </div>
+              value={filters.status}
+              onChange={handleFilterChange}
+              name="status"
+            >
+              {statusOptions.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
+          </div>
           </div>
           <div className="flex justify-center sm:justify-end">
-            <button
+          <button
               className="bg-[#243158] hover:bg-[#1b2545] text-white px-4 py-2 sm:py-3 rounded-md text-sm flex items-center transition-colors w-full sm:w-auto"
-              onClick={resetFilters}
-            >
-              <Search className="inline mr-2 h-4 w-4" />
-              Search
-            </button>
+            onClick={resetFilters}
+          >
+            <Search className="inline mr-2 h-4 w-4" />
+            Search
+          </button>
           </div>
         </div>
 
@@ -384,46 +384,46 @@ const ComplaintsReport = () => {
               <div key={index}>
                 {/* Desktop Table Row */}
                 <div className="hidden lg:grid grid-cols-12 p-3 border-b border-gray-200 text-sm items-center">
-                  <div className="px-2 font-medium">{complaint.complaintNo}</div>
-                  <div className="px-2">{complaint.date}</div>
-                  <div className="px-2">{complaint.amcId}</div>
-                  <div className="px-2">{complaint.siteId}</div>
-                  <div className="px-2">{complaint.customer}</div>
-                  <div className="px-2">
-                    <span className={`px-2 py-1 rounded-full text-xs ${
-                      complaint.type === 'Electrical' ? 'bg-blue-100 text-blue-800' : 
-                      'bg-gray-100 text-gray-800'
-                    }`}>
-                      {complaint.type}
-                    </span>
-                  </div>
-                  <div className="px-2">{complaint.problem}</div>
-                  <div className="px-2">{complaint.resolution}</div>
-                  <div className="px-2">{complaint.doneBy}</div>
-                  <div className="px-2">
-                    <span className={`px-2 py-1 rounded-full text-xs ${
-                      complaint.status === 'Closed' ? 'bg-green-100 text-green-800' : 
-                      complaint.status === 'In Progress' ? 'bg-purple-100 text-purple-800' :
-                      complaint.status === 'Open' ? 'bg-yellow-100 text-yellow-800' :
-                      'bg-gray-100 text-gray-800'
-                    }`}>
-                      {complaint.status}
-                    </span>
-                  </div>
-                  <div className="px-2">
-                    {complaint.status !== 'Closed' && (
-                      <button className="p-1 text-green-600 hover:bg-green-50 rounded">
-                        <Check className="h-4 w-4" />
-                      </button>
-                    )}
-                  </div>
-                  <div className="px-2">
-                    <button 
-                      className="p-1 text-blue-600 hover:bg-blue-50 rounded"
-                      onClick={() => handlePrintComplaint(complaint.id)}
-                    >
-                      <Printer className="h-4 w-4" />
+                <div className="px-2 font-medium">{complaint.complaintNo}</div>
+                <div className="px-2">{complaint.date}</div>
+                <div className="px-2">{complaint.amcId}</div>
+                <div className="px-2">{complaint.siteId}</div>
+                <div className="px-2">{complaint.customer}</div>
+                <div className="px-2">
+                  <span className={`px-2 py-1 rounded-full text-xs ${
+                    complaint.type === 'Electrical' ? 'bg-blue-100 text-blue-800' : 
+                    'bg-gray-100 text-gray-800'
+                  }`}>
+                    {complaint.type}
+                  </span>
+                </div>
+                <div className="px-2">{complaint.problem}</div>
+                <div className="px-2">{complaint.resolution}</div>
+                <div className="px-2">{complaint.doneBy}</div>
+                <div className="px-2">
+                  <span className={`px-2 py-1 rounded-full text-xs ${
+                    complaint.status === 'Closed' ? 'bg-green-100 text-green-800' : 
+                    complaint.status === 'In Progress' ? 'bg-purple-100 text-purple-800' :
+                    complaint.status === 'Open' ? 'bg-yellow-100 text-yellow-800' :
+                    'bg-gray-100 text-gray-800'
+                  }`}>
+                    {complaint.status}
+                  </span>
+                </div>
+                <div className="px-2">
+                  {complaint.status !== 'Closed' && (
+                    <button className="p-1 text-green-600 hover:bg-green-50 rounded">
+                      <Check className="h-4 w-4" />
                     </button>
+                  )}
+                </div>
+                <div className="px-2">
+                  <button 
+                    className="p-1 text-blue-600 hover:bg-blue-50 rounded"
+                    onClick={() => handlePrintComplaint(complaint.id)}
+                  >
+                    <Printer className="h-4 w-4" />
+                  </button>
                   </div>
                 </div>
 

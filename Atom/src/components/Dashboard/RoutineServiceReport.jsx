@@ -73,7 +73,7 @@ const RoutineServiceReport = () => {
               </button>
               
               {showExportMenu && (
-                <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10 border border-gray-200">
+                <div className="absolute right-0 sm:right-0 left-0 sm:left-auto mt-2 w-48 bg-white rounded-md shadow-lg z-10 border border-gray-200">
                   <div className="py-1">
                     <button 
                       onClick={() => handleExport('copy')}

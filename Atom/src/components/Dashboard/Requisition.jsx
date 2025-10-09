@@ -300,7 +300,7 @@ const Requisition = () => {
 
             <div
               id="bulk-actions-dropdown"
-              className="hidden absolute right-0 z-10 mt-2 w-56 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none"
+              className="hidden absolute right-0 sm:right-0 left-0 sm:left-auto z-10 mt-2 w-56 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none"
               role="menu"
               aria-orientation="vertical"
               aria-labelledby="bulk-actions-menu"
@@ -342,7 +342,7 @@ const Requisition = () => {
 
             <div
               id="options-dropdown"
-              className="hidden absolute right-0 z-10 mt-2 w-56 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none"
+              className="hidden absolute right-0 sm:right-0 left-0 sm:left-auto z-10 mt-2 w-56 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none"
               role="menu"
               aria-orientation="vertical"
               aria-labelledby="options-menu"
