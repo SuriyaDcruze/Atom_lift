@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from 'react-toastify';
-import { X } from 'lucide-react'; // Removed Edit and Trash2 for now since modal is commented out
+import { X } from 'lucide-react';
 
 const apiBaseUrl = import.meta.env.VITE_BASE_API;
 
-const ComplaintForm = ({ isEdit, initialData, onClose, onSubmitSuccess, onSubmitError, apiBaseUrl: propApiBaseUrl = apiBaseUrl, dropdownOptions }) => {
+const ComplaintForm = ({ isEdit, initialData, onClose, onSubmitSuccess, onSubmitError, apiBaseUrl: propApiBaseUrl = apiBaseUrl }) => {
   const [formData, setFormData] = useState({
     reference: '',
     type: 'Service Request',
@@ -93,18 +93,18 @@ const ComplaintForm = ({ isEdit, initialData, onClose, onSubmitSuccess, onSubmit
   useEffect(() => {
     if (!optionsLoading.customers && !optionsLoading.salesmen && isEdit && initialData) {
       const selectedCustomer = customers.find(c => c.site_name === initialData.customer) || {};
-      const selectedSalesman = salesmen.find(s => s.id === initialData.assign_to) || {}; // Adjusted to match id
+      const selectedSalesman = customers.find(c => c.site_name === initialData.assignedTo) || {};
 
       setFormData({
         reference: initialData.reference || '',
         type: initialData.type || 'Service Request',
-        date: initialData.date ? new Date(initialData.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+        date: initialData.created ? new Date(initialData.created).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
         customer: selectedCustomer.id || '',
-        contactPersonName: initialData.contact_person_name || selectedCustomer.contact_person_name || '',
+        contactPersonName: initialData.createdBy || selectedCustomer.contact_person_name || '',
         contactPersonMobile: initialData.contact_person_mobile || selectedCustomer.phone || '',
         blockWing: initialData.block_wing || selectedCustomer.site_address || '',
         assignTo: selectedSalesman.id || '',
-        priority: initialData.priority || 'Medium',
+        priority: initialData.status || 'Medium',
         subject: initialData.subject || '',
         message: initialData.message || '',
         customerSignature: initialData.customer_signature || '',
@@ -161,25 +161,26 @@ const ComplaintForm = ({ isEdit, initialData, onClose, onSubmitSuccess, onSubmit
         solution: formData.solution,
       };
 
-      console.log('Submitting data:', submitData); // Debug log
+      console.log('Submitting data:', submitData);
 
+      let response;
       if (isEdit && initialData?.id) {
-        const response = await axios.put(`${propApiBaseUrl}/auth/edit-complaint/${initialData.id}/`, submitData, {
+        response = await axios.put(`${propApiBaseUrl}/auth/edit-complaint/${initialData.id}/`, submitData, {
           headers: { Authorization: `Bearer ${token}` },
         });
         toast.success('Complaint updated successfully.');
-        onSubmitSuccess?.(response.data);
       } else {
-        const response = await axios.post(`${propApiBaseUrl}/auth/add-complaint/`, submitData, {
+        response = await axios.post(`${propApiBaseUrl}/auth/add-complaint/`, submitData, {
           headers: { Authorization: `Bearer ${token}` },
         });
         toast.success('Complaint created successfully.');
-        onSubmitSuccess?.(response.data);
       }
 
+      // Pass the response data including qr_code_url to parent
+      onSubmitSuccess?.({ ...response.data, qr_code_url: response.data.qr_code_url });
       onClose();
     } catch (error) {
-      console.error('Error submitting complaint:', error.response || error); // Debug log
+      console.error('Error submitting complaint:', error.response || error);
       const errorMsg = error.response?.data?.error || error.response?.data?.non_field_errors?.[0] || 'Failed to submit complaint.';
       toast.error(errorMsg);
       onSubmitError?.(error);
@@ -188,7 +189,6 @@ const ComplaintForm = ({ isEdit, initialData, onClose, onSubmitSuccess, onSubmit
     }
   };
 
-  // Fallback rendering if data is loading or errored
   if (optionsLoading.customers || optionsLoading.salesmen) {
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -223,7 +223,7 @@ const ComplaintForm = ({ isEdit, initialData, onClose, onSubmitSuccess, onSubmit
           </div>
 
           {/* Modal Body */}
-          <div className="p-6 max-h-[70vh] overflow-y-auto">
+          <div className="p-6 max-h-[70vh] overflow-y-auto space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Left Column */}
               <div className="space-y-4">

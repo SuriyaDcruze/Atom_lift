@@ -98,37 +98,85 @@ const MaterialRequest = () => {
 
         {/* Requests Table */}
         <div className="bg-white rounded-lg shadow overflow-hidden">
-          {/* Table Header */}
-          <div className="grid grid-cols-8 bg-gray-100 p-3 font-medium text-gray-700 text-sm border-b border-gray-200">
-            <div className="px-2">DATE</div>
-            <div className="px-2">NAME</div>
-            <div className="px-2">DESCRIPTION</div>
-            <div className="px-2">ITEM</div>
-            <div className="px-2">BRAND</div>
-            <div className="px-2">FILE</div>
-            <div className="px-2">ADDED BY</div>
-            <div className="px-2">REQUESTED BY</div>
-          </div>
-          
-          {/* Table Rows */}
-          {requests.length > 0 ? (
-            requests.map((request, index) => (
-              <div key={index} className="grid grid-cols-8 p-3 border-b border-gray-200 text-sm items-center">
-                <div className="px-2">{request.date}</div>
-                <div className="px-2 font-medium">{request.name}</div>
-                <div className="px-2">{request.description}</div>
-                <div className="px-2">{request.item}</div>
-                <div className="px-2">{request.brand || '-'}</div>
-                <div className="px-2">{request.file}</div>
-                <div className="px-2">{request.addedBy}</div>
-                <div className="px-2">{request.requestedBy}</div>
+          {/* Mobile View - Card Layout */}
+          <div className="block md:hidden">
+            {requests.length > 0 ? (
+              requests.map((request, index) => (
+                <div key={index} className="p-4 border-b border-gray-200 last:border-b-0">
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-start">
+                      <div className="font-medium text-gray-900">{request.name}</div>
+                      <div className="text-xs text-gray-500">{request.date}</div>
+                    </div>
+                    <div className="text-sm text-gray-600">{request.description}</div>
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div>
+                        <span className="text-gray-500">Item:</span>
+                        <span className="ml-1">{request.item}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">Brand:</span>
+                        <span className="ml-1">{request.brand || '-'}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">File:</span>
+                        <span className="ml-1">{request.file}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">Added By:</span>
+                        <span className="ml-1">{request.addedBy}</span>
+                      </div>
+                    </div>
+                    <div className="text-xs">
+                      <span className="text-gray-500">Requested By:</span>
+                      <span className="ml-1">{request.requestedBy}</span>
+                    </div>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="p-4 text-center text-gray-500">
+                No data to show
               </div>
-            ))
-          ) : (
-            <div className="p-4 text-center text-gray-500">
-              No data to show
+            )}
+          </div>
+
+          {/* Desktop View - Table Layout */}
+          <div className="hidden md:block overflow-x-auto">
+            <div className="min-w-full">
+              {/* Table Header */}
+              <div className="grid grid-cols-8 bg-gray-100 p-3 font-medium text-gray-700 text-sm border-b border-gray-200 min-w-[800px]">
+                <div className="px-2 min-w-[80px]">DATE</div>
+                <div className="px-2 min-w-[120px]">NAME</div>
+                <div className="px-2 min-w-[150px]">DESCRIPTION</div>
+                <div className="px-2 min-w-[100px]">ITEM</div>
+                <div className="px-2 min-w-[100px]">BRAND</div>
+                <div className="px-2 min-w-[100px]">FILE</div>
+                <div className="px-2 min-w-[120px]">ADDED BY</div>
+                <div className="px-2 min-w-[150px]">REQUESTED BY</div>
+              </div>
+              
+              {/* Table Rows */}
+              {requests.length > 0 ? (
+                requests.map((request, index) => (
+                  <div key={index} className="grid grid-cols-8 p-3 border-b border-gray-200 text-sm items-center min-w-[800px]">
+                    <div className="px-2 min-w-[80px]">{request.date}</div>
+                    <div className="px-2 min-w-[120px] font-medium">{request.name}</div>
+                    <div className="px-2 min-w-[150px]">{request.description}</div>
+                    <div className="px-2 min-w-[100px]">{request.item}</div>
+                    <div className="px-2 min-w-[100px]">{request.brand || '-'}</div>
+                    <div className="px-2 min-w-[100px]">{request.file}</div>
+                    <div className="px-2 min-w-[120px]">{request.addedBy}</div>
+                    <div className="px-2 min-w-[150px]">{request.requestedBy}</div>
+                  </div>
+                ))
+              ) : (
+                <div className="p-4 text-center text-gray-500">
+                  No data to show
+                </div>
+              )}
             </div>
-          )}
+          </div>
 
           {/* Pagination */}
           <div className="p-3 text-sm text-gray-600 border-t border-gray-200">

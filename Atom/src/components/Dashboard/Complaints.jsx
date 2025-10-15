@@ -16,7 +16,7 @@ const Complaints = () => {
     by: 'ALL',
     status: 'ALL',
   });
-  const [periodOptions] = useState(['ALL TIME', 'THIS MONTH', 'LAST_MONTH','THIS YEAR','LAST YEAR','LAST 3 MONTHS','LAST 6 MONTHS','LAST 12 MONTHS','CUSTOM']);
+  const [periodOptions] = useState(['ALL TIME', 'LAST_WEEK', 'LAST_MONTH']);
   const [customerOptions, setCustomerOptions] = useState([]);
   const [byOptions] = useState(['ALL', 'Customer', 'Admin']);
   const [statusOptions] = useState(['ALL', 'In Progress', 'Open', 'Closed']);
@@ -56,7 +56,6 @@ const Complaints = () => {
         id: complaint.id,
         reference: complaint.reference,
         created: complaint.date,
-        // Format date only (DD/MM/YYYY)
         formattedCreated: new Date(complaint.date).toLocaleDateString('en-GB', {
           day: '2-digit',
           month: '2-digit',
@@ -69,6 +68,7 @@ const Complaints = () => {
         assignedTo: complaint.assign_to_name || 'Unassigned',
         solution: complaint.solution,
         source: complaint.contact_person_name ? 'Customer' : 'Admin',
+        qr_code_url: complaint.qr_code_url || null, // Include QR code URL
       }));
 
       setComplaints(complaintsData);
@@ -369,7 +369,6 @@ const Complaints = () => {
                   id="bulk-actions-dropdown"
                   className="hidden origin-top-right absolute right-0 mt-2 w-28 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none z-10"
                 >
-                  
                   <button
                     onClick={handleBulkDelete}
                     disabled={selectedComplaints.length === 0}
@@ -380,7 +379,6 @@ const Complaints = () => {
                     }`}
                   >
                     Delete
-                    
                   </button>
                 </div>
               </div>
@@ -398,7 +396,6 @@ const Complaints = () => {
 
       {/* Filters */}
       <div className="bg-white rounded-lg border border-gray-200 p-4 mb-4 flex flex-col sm:flex-row gap-2 items-center justify-between flex-wrap">
-        {/* Period */}
         <div className="flex flex-col w-full sm:w-40">
           <label className="mb-1 text-xs text-gray-500 font-medium" htmlFor="period-select">
             Period
@@ -418,7 +415,6 @@ const Complaints = () => {
           </select>
         </div>
 
-        {/* By */}
         <div className="flex flex-col w-full sm:w-40">
           <label className="mb-1 text-xs text-gray-500 font-medium" htmlFor="by-select">
             By
@@ -438,7 +434,6 @@ const Complaints = () => {
           </select>
         </div>
 
-        {/* Customer */}
         <div className="flex flex-col w-full sm:w-40">
           <label className="mb-1 text-xs text-gray-500 font-medium" htmlFor="customer-select">
             Customer
@@ -459,7 +454,6 @@ const Complaints = () => {
           </select>
         </div>
 
-        {/* Status */}
         <div className="flex flex-col w-full sm:w-40">
           <label className="mb-1 text-xs text-gray-500 font-medium" htmlFor="status-select">
             Status
@@ -488,7 +482,7 @@ const Complaints = () => {
       </div>
 
       {/* Tabs */}
-      {/* <div className="flex gap-2 mb-4 flex-wrap">
+      <div className="flex gap-2 mb-4 flex-wrap">
         <button className="bg-[#243158] text-white rounded-md px-4 py-2 text-sm font-medium whitespace-nowrap">Complaints</button>
         <button className="bg-white border border-gray-300 text-gray-800 rounded-md px-4 py-2 text-sm font-medium whitespace-nowrap">
           Transaction History
@@ -496,14 +490,14 @@ const Complaints = () => {
         <button className="bg-white border border-gray-300 text-gray-800 rounded-md px-4 py-2 text-sm font-medium whitespace-nowrap">
           Check Transaction History
         </button>
-      </div> */}
+      </div>
 
       {/* Table container with horizontal scroll on small screens */}
       <div className="bg-white rounded-lg shadow-lg overflow-x-auto">
         {loading ? (
           <p className="p-4 text-center">Loading complaints...</p>
         ) : (
-          <table className="w-full table-fixed border-collapse min-w-[720px]">
+          <table className="w-full table-fixed border-collapse min-w-[800px]">
             <thead>
               <tr className="bg-gray-100 text-gray-700 text-xs uppercase">
                 <th className="p-2 w-12 text-center align-middle">
@@ -523,7 +517,7 @@ const Complaints = () => {
                 <th className="p-2 w-[120px] text-left whitespace-nowrap">PRIORITY</th>
                 <th className="p-2 w-[150px] text-left whitespace-nowrap">SUBJECT</th>
                 <th className="p-2 w-[100px] text-left whitespace-nowrap">ASSIGNED TO</th>
-                <th className="p-2 w-[100px] text-left whitespace-nowrap">SOLUTION</th>
+                <th className="p-2 w-[100px] text-left whitespace-nowrap">QR CODE</th>
                 <th className="p-2 w-[100px] text-left whitespace-nowrap">ACTIONS</th>
               </tr>
             </thead>
@@ -576,13 +570,14 @@ const Complaints = () => {
                     <td className="p-2 w-[150px] text-left whitespace-nowrap">{comp.subject}</td>
                     <td className="p-2 w-[100px] text-left whitespace-nowrap">{comp.assignedTo || 'Unassigned'}</td>
                     <td className="p-2 w-[100px] text-left whitespace-nowrap">
-                      {comp.solution ? (
-                        <Printer
-                          className="cursor-pointer hover:text-blue-600"
-                          onClick={() => handlePrintComplaint(comp.id)}
+                      {comp.qr_code_url ? (
+                        <img
+                          src={comp.qr_code_url}
+                          alt={`QR Code for ${comp.reference}`}
+                          className="w-16 h-16 object-contain"
                         />
                       ) : (
-                        '-'
+                        'N/A'
                       )}
                     </td>
                     <td className="p-2 w-[100px] text-left whitespace-nowrap">
