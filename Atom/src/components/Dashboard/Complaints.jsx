@@ -68,7 +68,6 @@ const Complaints = () => {
         assignedTo: complaint.assign_to_name || 'Unassigned',
         solution: complaint.solution,
         source: complaint.contact_person_name ? 'Customer' : 'Admin',
-        qr_code_url: complaint.qr_code_url || null, // Include QR code URL
       }));
 
       setComplaints(complaintsData);
@@ -517,14 +516,13 @@ const Complaints = () => {
                 <th className="p-2 w-[120px] text-left whitespace-nowrap">PRIORITY</th>
                 <th className="p-2 w-[150px] text-left whitespace-nowrap">SUBJECT</th>
                 <th className="p-2 w-[100px] text-left whitespace-nowrap">ASSIGNED TO</th>
-                <th className="p-2 w-[100px] text-left whitespace-nowrap">QR CODE</th>
                 <th className="p-2 w-[100px] text-left whitespace-nowrap">ACTIONS</th>
               </tr>
             </thead>
             <tbody>
               {currentComplaints.length === 0 ? (
                 <tr>
-                  <td colSpan="9" className="p-4 text-center text-gray-500">
+                    <td colSpan="8" className="p-4 text-center text-gray-500">
                     No complaints found.
                   </td>
                 </tr>
@@ -569,17 +567,6 @@ const Complaints = () => {
                     </td>
                     <td className="p-2 w-[150px] text-left whitespace-nowrap">{comp.subject}</td>
                     <td className="p-2 w-[100px] text-left whitespace-nowrap">{comp.assignedTo || 'Unassigned'}</td>
-                    <td className="p-2 w-[100px] text-left whitespace-nowrap">
-                      {comp.qr_code_url ? (
-                        <img
-                          src={comp.qr_code_url}
-                          alt={`QR Code for ${comp.reference}`}
-                          className="w-16 h-16 object-contain"
-                        />
-                      ) : (
-                        'N/A'
-                      )}
-                    </td>
                     <td className="p-2 w-[100px] text-left whitespace-nowrap">
                       <div className="flex space-x-2 justify-center">
                         <Edit

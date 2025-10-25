@@ -38,7 +38,7 @@ const AMC = () => {
   const [invoiceFrequencyOptions] = useState(invoiceFrequencyOptionsStatic.map(option => option.value));
   const [amcTypeOptions, setAmcTypeOptions] = useState([]);
   const [paymentTermsOptions, setPaymentTermsOptions] = useState([]);
-  const [statusOptions, setStatusOptions] = useState(['Active', 'Expired', 'Cancelled','On Hold']);
+  const [statusOptions, setStatusOptions] = useState([]);
 
   // State for modals
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -106,8 +106,8 @@ const AMC = () => {
           year: 'numeric',
         }),
         contactPeriod: `${new Date(item.start_date).toLocaleDateString('en-GB')} - ${new Date(item.end_date).toLocaleDateString('en-GB')}`,
-        nextPayment: item.next_payment ? new Date(item.next_payment).toLocaleDateString('en-GB') : 'Payments Complete',
-        status: item.status || 'Active',
+        nextPayment: item.next_payment ? new Date(item.next_payment).toLocaleDateString('en-GB') : (item.payment_status === 'completed' ? 'Payments Complete' : 'Payment Pending'),
+        status: item.status || item.contract_status || 'Active',
         amount: `Contract Amount: ${item.contract_amount || '0.00'}, Total Amount Paid: ${item.total_amount_paid || '0.00'}, Amount Due: ${item.amount_due || '0.00'}`,
         referenceId: item.reference_id,
         invoiceFrequency: invoiceFrequencyOptionsStatic.find(opt => opt.value === item.invoice_frequency)?.label || '-',
@@ -126,6 +126,13 @@ const AMC = () => {
       setCustomerOptions(customers.data);
       setAmcTypeOptions(amcTypes.data);
       setPaymentTermsOptions(paymentTerms.data);
+      
+      // Extract unique status values from the API data
+      const uniqueStatuses = [...new Set(amcResponse.data.map(item => item.status || item.contract_status).filter(Boolean))];
+      // Always include all status options, even if not present in current data
+      const allStatusOptions = ['Active', 'Expired', 'Cancelled', 'On Hold', 'Completed'];
+      const combinedStatuses = [...new Set([...allStatusOptions, ...uniqueStatuses])];
+      setStatusOptions(combinedStatuses);
 
       // Check for customerId in URL and open AMCForm if present
       const queryParams = new URLSearchParams(location.search);
@@ -707,7 +714,16 @@ const AMC = () => {
                     <td className="p-3 lg:p-4 text-gray-800 hidden lg:table-cell whitespace-nowrap">{amc.contactPeriod}</td>
                     <td className="p-3 lg:p-4 text-gray-800 hidden lg:table-cell whitespace-nowrap">{amc.nextPayment}</td>
                     <td className="p-3 lg:p-4">
-                      <span className="bg-[#00B69B] text-white px-4 py-2 rounded-full font-medium">{amc.status}</span>
+                      <span className={`px-4 py-2 rounded-full font-medium ${
+                        amc.status === 'Active' ? 'bg-green-100 text-green-800' :
+                        amc.status === 'Expired' ? 'bg-red-100 text-red-800' :
+                        amc.status === 'Cancelled' ? 'bg-gray-100 text-gray-800' :
+                        amc.status === 'On Hold' ? 'bg-yellow-100 text-yellow-800' :
+                        amc.status === 'Completed' ? 'bg-blue-100 text-blue-800' :
+                        'bg-[#00B69B] text-white'
+                      }`}>
+                        {amc.status}
+                      </span>
                     </td>
                     <td className="p-3 lg:p-4 text-gray-800 hidden xl:table-cell">{amc.amount}</td>
                     <td className="p-3 lg:p-4 whitespace-nowrap">
@@ -880,7 +896,16 @@ const AMC = () => {
                 </div>
                 <div className="bg-gray-50 p-2 rounded">
                   <span className="text-gray-500 block text-xs">Status</span>
-                  <span className="font-medium">{amc.status}</span>
+                  <span className={`font-medium px-2 py-1 rounded text-xs ${
+                    amc.status === 'Active' ? 'bg-green-100 text-green-800' :
+                    amc.status === 'Expired' ? 'bg-red-100 text-red-800' :
+                    amc.status === 'Cancelled' ? 'bg-gray-100 text-gray-800' :
+                    amc.status === 'On Hold' ? 'bg-yellow-100 text-yellow-800' :
+                    amc.status === 'Completed' ? 'bg-blue-100 text-blue-800' :
+                    'bg-gray-100 text-gray-800'
+                  }`}>
+                    {amc.status}
+                  </span>
                 </div>
                 <div className="bg-gray-50 p-2 rounded">
                   <span className="text-gray-500 block text-xs">Contract Period</span>

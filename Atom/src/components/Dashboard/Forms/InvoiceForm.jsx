@@ -21,6 +21,9 @@ const InvoiceForm = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [customerList, setCustomerList] = useState([]);
   const [amcList, setAmcList] = useState([]);
+  const [customerSearch, setCustomerSearch] = useState('');
+  const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
+  const [filteredCustomers, setFilteredCustomers] = useState([]);
 
   const [alertMessage, setAlertMessage] = useState({
     show: false,
@@ -57,6 +60,29 @@ const InvoiceForm = ({
       setAlertMessage(prev => ({ ...prev, show: false }));
     }, 5000);
   };
+
+  // Filter customers based on search input
+  useEffect(() => {
+    if (customerSearch) {
+      const filtered = customerList.filter(customer =>
+        customer.site_name.toLowerCase().includes(customerSearch.toLowerCase())
+      );
+      setFilteredCustomers(filtered);
+    } else {
+      setFilteredCustomers(customerList);
+    }
+  }, [customerSearch, customerList]);
+
+  // Sync customer search with form data when form is loaded with existing data
+  useEffect(() => {
+    if (formData.customer && !customerSearch) {
+      // Find customer by ID and set the search value to the customer name
+      const selectedCustomer = customerList.find(c => c.id === formData.customer);
+      if (selectedCustomer) {
+        setCustomerSearch(selectedCustomer.site_name);
+      }
+    }
+  }, [formData.customer, customerSearch, customerList]);
 
   useEffect(() => {
     const fetchDropdowns = async () => {
@@ -116,6 +142,25 @@ const InvoiceForm = ({
       ...prev,
       [name]: value,
     }));
+  };
+
+  const handleCustomerSearch = (e) => {
+    const value = e.target.value;
+    setCustomerSearch(value);
+    setShowCustomerDropdown(true);
+    
+    // Find the customer by name and set the ID
+    const selectedCustomer = customerList.find(c => c.site_name === value);
+    setFormData(prev => ({ ...prev, customer: selectedCustomer ? selectedCustomer.id : value }));
+  };
+
+  const handleCustomerSelect = (customer) => {
+    setCustomerSearch(customer.site_name);
+    setFormData(prev => ({
+      ...prev,
+      customer: customer.id
+    }));
+    setShowCustomerDropdown(false);
   };
 
   const handleFileChange = (e) => {
@@ -228,24 +273,37 @@ const InvoiceForm = ({
                   />
                 </div>
                 {/* Customer */}
-                <div>
+                <div className="relative">
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     CUSTOMER <span className="text-red-500">*</span>
                   </label>
-                  <select
+                  <input
+                    type="text"
                     name="customer"
-                    value={formData.customer}
-                    onChange={handleInputChange}
-                    className="block w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white"
+                    value={customerSearch}
+                    onChange={handleCustomerSearch}
+                    onFocus={() => setShowCustomerDropdown(true)}
+                    onBlur={() => setTimeout(() => setShowCustomerDropdown(false), 200)}
+                    className="block w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200"
+                    placeholder="Search customer..."
                     required
-                  >
-                    <option value="">Select Customer</option>
-                    {customerList.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.site_name}
-                      </option>
-                    ))}
-                  </select>
+                  />
+                  {showCustomerDropdown && filteredCustomers.length > 0 && (
+                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                      {filteredCustomers.map((customer) => (
+                        <div
+                          key={customer.id}
+                          onClick={() => handleCustomerSelect(customer)}
+                          className="px-4 py-2 hover:bg-gray-100 cursor-pointer border-b border-gray-100 last:border-b-0"
+                        >
+                          <div className="font-medium text-gray-900">{customer.site_name}</div>
+                          {customer.contact_person_name && (
+                            <div className="text-sm text-gray-500">{customer.contact_person_name}</div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 {/* AMC */}
                 <div>

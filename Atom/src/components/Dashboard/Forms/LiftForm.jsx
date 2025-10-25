@@ -316,7 +316,22 @@ const LiftForm = ({
 
   // Handle form submission
   const handleSubmit = async () => {
-    const requiredFields = ['liftCode', 'noOfPassengers', 'brand', 'load', 'floorID', 'cabin'];
+    const requiredFields = [
+      'liftCode', 
+      'noOfPassengers', 
+      'brand', 
+      'load', 
+      'floorID', 
+      'cabin',
+      'name',
+      'speed',
+      'liftType',
+      'machineType',
+      'machineBrand',
+      'doorType',
+      'doorBrand',
+      'controllerBrand'
+    ];
     const isValid = requiredFields.every((field) => newLift[field]);
     
     if (!isValid) {
@@ -399,7 +414,6 @@ const LiftForm = ({
       // Notify parent component of successful submission
       console.log('LiftForm - calling onSubmitSuccess');
       onSubmitSuccess();
-      onClose();
     } catch (error) {
       console.error(`Error ${isEdit ? 'editing' : 'creating'} lift:`, error);
       if (error.response?.status === 401) {
@@ -558,7 +572,7 @@ const LiftForm = ({
               {/* Name */}
               <div className="form-group">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Name
+                  Name <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -685,7 +699,7 @@ const LiftForm = ({
               {/* Speed */}
               <div className="form-group">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Speed
+                  Speed <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -700,7 +714,7 @@ const LiftForm = ({
               {/* Machine Type */}
               <div className="form-group">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Machine Type
+                  Machine Type <span className="text-red-500">*</span>
                 </label>
                 <div className="flex">
                   <select
@@ -729,7 +743,7 @@ const LiftForm = ({
               {/* Machine Brand */}
               <div className="form-group">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Machine Brand
+                  Machine Brand <span className="text-red-500">*</span>
                 </label>
                 <div className="flex">
                   <select
@@ -758,7 +772,7 @@ const LiftForm = ({
               {/* Lift Type */}
               <div className="form-group">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Lift Type
+                  Lift Type <span className="text-red-500">*</span>
                 </label>
                 <div className="flex">
                   <select
@@ -797,7 +811,7 @@ const LiftForm = ({
               {/* Door Type */}
               <div className="form-group">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Door Type
+                  Door Type <span className="text-red-500">*</span>
                 </label>
                 <div className="flex">
                   <select
@@ -826,7 +840,7 @@ const LiftForm = ({
               {/* Door Brand */}
               <div className="form-group">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Door Brand
+                  Door Brand <span className="text-red-500">*</span>
                 </label>
                 <div className="flex">
                   <select
@@ -855,7 +869,7 @@ const LiftForm = ({
               {/* Controller Brand */}
               <div className="form-group">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Controller Brand
+                  Controller Brand <span className="text-red-500">*</span>
                 </label>
                 <div className="flex">
                   <select

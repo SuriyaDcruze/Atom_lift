@@ -1219,7 +1219,7 @@ const CustomerDetails = () => {
             console.log('LiftForm onSubmitSuccess called for customerId:', customerId);
             fetchCustomerLifts(); // Refresh lifts data
             setIsLiftFormOpen(false);
-            toast.success('Lift added successfully!');
+            toast(<SuccessToast message="Lift added successfully!" />, { autoClose: 3000 });
           }}
           apiBaseUrl={apiBaseUrl}
           dropdownOptions={{}}

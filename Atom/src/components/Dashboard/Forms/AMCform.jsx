@@ -30,7 +30,7 @@ const AMCForm = ({
     startDate: '',
     endDate: '',
     equipmentNo: '',
-    latitude: '',
+    coordinates: '',
     notes: '',
     isGenerateContractNow: false,
     noOfServices: '',
@@ -46,6 +46,9 @@ const AMCForm = ({
   const [existingAmcTypes, setExistingAmcTypes] = useState([]);
   const [amcServiceItems, setAmcServiceItems] = useState([]);
   const [customers, setCustomers] = useState([]); // New state for customers
+  const [customerSearch, setCustomerSearch] = useState('');
+  const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
+  const [filteredCustomers, setFilteredCustomers] = useState([]);
 
   const [modalState, setModalState] = useState({
     amcType: { isOpen: false, value: '', price: '', isEditing: false, editId: null },
@@ -138,6 +141,25 @@ const AMCForm = ({
     fetchOptions('customer'); // Fetch customers on mount
   }, []);
 
+  // Filter customers based on search input
+  useEffect(() => {
+    if (customerSearch) {
+      const filtered = customers.filter(customer =>
+        customer.site_name.toLowerCase().includes(customerSearch.toLowerCase())
+      );
+      setFilteredCustomers(filtered);
+    } else {
+      setFilteredCustomers(customers);
+    }
+  }, [customerSearch, customers]);
+
+  // Sync customer search with form data when form is loaded with existing data
+  useEffect(() => {
+    if (newAMC.customer && !customerSearch) {
+      setCustomerSearch(newAMC.customer);
+    }
+  }, [newAMC.customer, customerSearch]);
+
   // Handle customerId parameter for auto-population
   useEffect(() => {
     console.log('AMC Form - Checking navigation mode:', isNavigationMode());
@@ -229,6 +251,9 @@ const AMCForm = ({
           equipmentNo: customerData.job_no || '', // Auto-populate equipment number with job number
         }));
         
+        // Also set the customer search value
+        setCustomerSearch(customerData.site_name || '');
+        
         showSuccessMessage('Customer details loaded successfully.');
       } else {
         console.log('Customer not found with ID:', customerId);
@@ -258,16 +283,29 @@ const AMCForm = ({
           const formattedEndDate = endDate.toISOString().split('T')[0];
           updatedAMC.endDate = formattedEndDate;
         }
-
-        // Auto-fill equipment number from selected customer's job number
-        if (name === 'customer') {
-          const selectedCustomer = customers.find(c => c.site_name === value);
-          updatedAMC.equipmentNo = selectedCustomer?.job_no || '';
-        }
         
         return updatedAMC;
       });
     }
+  };
+
+  const handleCustomerSearch = (e) => {
+    const value = e.target.value;
+    setCustomerSearch(value);
+    setShowCustomerDropdown(true);
+    
+    // Update the customer field in form data
+    setNewAMC((prev) => ({ ...prev, customer: value }));
+  };
+
+  const handleCustomerSelect = (customer) => {
+    setCustomerSearch(customer.site_name);
+    setNewAMC((prev) => ({
+      ...prev,
+      customer: customer.site_name,
+      equipmentNo: customer.job_no || ''
+    }));
+    setShowCustomerDropdown(false);
   };
 
   const openAddModal = (field, isEditing = false, editId = null, editValue = '', editPrice = '') => {
@@ -415,7 +453,7 @@ const AMCForm = ({
       formData.append('start_date', newAMC.startDate);
       formData.append('end_date', newAMC.endDate);
       formData.append('equipment_no', newAMC.equipmentNo || '');
-      formData.append('latitude', newAMC.latitude || '');
+      formData.append('coordinates', newAMC.coordinates || '');
       formData.append('notes', newAMC.notes || '');
       formData.append('is_generate_contract', newAMC.isGenerateContractNow);
       formData.append('no_of_services', newAMC.noOfServices || '12');
@@ -515,24 +553,37 @@ const AMCForm = ({
               </div>
               )}
               
-              <div className="form-group">
+              <div className="form-group relative">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Customer *
                 </label>
-                <select
+                <input
+                  type="text"
                   name="customer"
-                  value={newAMC.customer}
-                  onChange={handleInputChange}
-                  className="block w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 appearance-none bg-white"
+                  value={customerSearch}
+                  onChange={handleCustomerSearch}
+                  onFocus={() => setShowCustomerDropdown(true)}
+                  onBlur={() => setTimeout(() => setShowCustomerDropdown(false), 200)}
+                  className="block w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200"
+                  placeholder="Search customer..."
                   required
-                >
-                  <option value="">Select Customer</option>
-                  {customers.map((customer) => (
-                    <option key={customer.id} value={customer.site_name}>
-                      {customer.site_name}
-                    </option>
-                  ))}
-                </select>
+                />
+                {showCustomerDropdown && filteredCustomers.length > 0 && (
+                  <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                    {filteredCustomers.map((customer) => (
+                      <div
+                        key={customer.id}
+                        onClick={() => handleCustomerSelect(customer)}
+                        className="px-4 py-2 hover:bg-gray-100 cursor-pointer border-b border-gray-100 last:border-b-0"
+                      >
+                        <div className="font-medium text-gray-900">{customer.site_name}</div>
+                        {customer.contact_person_name && (
+                          <div className="text-sm text-gray-500">{customer.contact_person_name}</div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
               
               <div className="form-group">
@@ -649,16 +700,15 @@ const AMCForm = ({
               </div>
               <div className="form-group">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Latitude
+                  Coordinates (Latitude, Longitude)
                 </label>
                 <input
-                  type="number"
-                  name="latitude"
-                  value={newAMC.latitude}
+                  type="text"
+                  name="coordinates"
+                  value={newAMC.coordinates}
                   onChange={handleInputChange}
-                  step="any"
                   className="block w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200"
-                  placeholder="Enter latitude coordinate"
+                  placeholder="Enter coordinates (e.g., 12.9716, 77.5946)"
                 />
               </div>
               <div className="form-group">

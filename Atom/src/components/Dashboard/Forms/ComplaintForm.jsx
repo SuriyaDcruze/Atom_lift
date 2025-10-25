@@ -18,10 +18,6 @@ const ComplaintForm = ({ isEdit, initialData, onClose, onSubmitSuccess, onSubmit
     priority: 'Medium',
     subject: '',
     message: '',
-    customerSignature: '',
-    technicianRemark: '',
-    technicianSignature: '',
-    solution: '',
   });
 
   const [customers, setCustomers] = useState([]);
@@ -29,6 +25,9 @@ const ComplaintForm = ({ isEdit, initialData, onClose, onSubmitSuccess, onSubmit
   const [loading, setLoading] = useState(false);
   const [optionsLoading, setOptionsLoading] = useState({ customers: true, salesmen: true });
   const [error, setError] = useState(null);
+  const [customerSearch, setCustomerSearch] = useState('');
+  const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
+  const [filteredCustomers, setFilteredCustomers] = useState([]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -90,16 +89,28 @@ const ComplaintForm = ({ isEdit, initialData, onClose, onSubmitSuccess, onSubmit
     fetchData();
   }, [isEdit, propApiBaseUrl]);
 
+  // Filter customers based on search input
+  useEffect(() => {
+    if (customerSearch) {
+      const filtered = customers.filter(customer =>
+        customer.site_name.toLowerCase().includes(customerSearch.toLowerCase())
+      );
+      setFilteredCustomers(filtered);
+    } else {
+      setFilteredCustomers(customers);
+    }
+  }, [customerSearch, customers]);
+
   useEffect(() => {
     if (!optionsLoading.customers && !optionsLoading.salesmen && isEdit && initialData) {
       const selectedCustomer = customers.find(c => c.site_name === initialData.customer) || {};
-      const selectedSalesman = customers.find(c => c.site_name === initialData.assignedTo) || {};
+      const selectedSalesman = salesmen.find(s => s.username === initialData.assignedTo) || {};
 
       setFormData({
         reference: initialData.reference || '',
         type: initialData.type || 'Service Request',
         date: initialData.created ? new Date(initialData.created).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
-        customer: selectedCustomer.id || '',
+        customer: selectedCustomer.site_name || '',
         contactPersonName: initialData.createdBy || selectedCustomer.contact_person_name || '',
         contactPersonMobile: initialData.contact_person_mobile || selectedCustomer.phone || '',
         blockWing: initialData.block_wing || selectedCustomer.site_address || '',
@@ -107,11 +118,10 @@ const ComplaintForm = ({ isEdit, initialData, onClose, onSubmitSuccess, onSubmit
         priority: initialData.status || 'Medium',
         subject: initialData.subject || '',
         message: initialData.message || '',
-        customerSignature: initialData.customer_signature || '',
-        technicianRemark: initialData.technician_remark || '',
-        technicianSignature: initialData.technician_signature || '',
-        solution: initialData.solution || '',
       });
+      
+      // Set customer search value for the input field
+      setCustomerSearch(selectedCustomer.site_name || '');
     }
   }, [isEdit, initialData, customers, salesmen, optionsLoading.customers, optionsLoading.salesmen]);
 
@@ -120,16 +130,25 @@ const ComplaintForm = ({ isEdit, initialData, onClose, onSubmitSuccess, onSubmit
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleCustomerChange = (e) => {
+  const handleCustomerSearch = (e) => {
     const value = e.target.value;
-    const selected = customers.find((c) => c.id === parseInt(value));
+    setCustomerSearch(value);
+    setShowCustomerDropdown(true);
+    
+    // Update the customer field in form data
+    setFormData((prev) => ({ ...prev, customer: value }));
+  };
+
+  const handleCustomerSelect = (customer) => {
+    setCustomerSearch(customer.site_name);
     setFormData((prev) => ({
       ...prev,
-      customer: value,
-      contactPersonName: selected ? selected.contact_person_name : '',
-      contactPersonMobile: selected ? selected.phone : '',
-      blockWing: selected ? selected.site_address : '',
+      customer: customer.site_name,
+      contactPersonName: customer.contact_person_name || '',
+      contactPersonMobile: customer.phone || '',
+      blockWing: customer.site_address || '',
     }));
+    setShowCustomerDropdown(false);
   };
 
   const handleSubmit = async (e) => {
@@ -144,10 +163,13 @@ const ComplaintForm = ({ isEdit, initialData, onClose, onSubmitSuccess, onSubmit
         return;
       }
 
+      // Find the selected customer by name
+      const selectedCustomer = customers.find(c => c.site_name === formData.customer);
+      
       const submitData = {
         type: formData.type,
         date: formData.date,
-        customer: formData.customer ? parseInt(formData.customer) : null,
+        customer: selectedCustomer ? selectedCustomer.id : null,
         contact_person_name: formData.contactPersonName,
         contact_person_mobile: formData.contactPersonMobile,
         block_wing: formData.blockWing,
@@ -155,10 +177,6 @@ const ComplaintForm = ({ isEdit, initialData, onClose, onSubmitSuccess, onSubmit
         priority: formData.priority,
         subject: formData.subject,
         message: formData.message,
-        customer_signature: formData.customerSignature,
-        technician_remark: formData.technicianRemark,
-        technician_signature: formData.technicianSignature,
-        solution: formData.solution,
       };
 
       console.log('Submitting data:', submitData);
@@ -274,24 +292,37 @@ const ComplaintForm = ({ isEdit, initialData, onClose, onSubmitSuccess, onSubmit
                   />
                 </div>
                 {/* Customer */}
-                <div>
+                <div className="form-group relative">
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     CUSTOMER <span className="text-red-500">*</span>
                   </label>
-                  <select
+                  <input
+                    type="text"
                     name="customer"
-                    value={formData.customer}
-                    onChange={handleCustomerChange}
-                    className="block w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                    value={customerSearch}
+                    onChange={handleCustomerSearch}
+                    onFocus={() => setShowCustomerDropdown(true)}
+                    onBlur={() => setTimeout(() => setShowCustomerDropdown(false), 200)}
+                    className="block w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200"
+                    placeholder="Search customer..."
                     required
-                  >
-                    <option value="">Select Customer</option>
-                    {customers.map((customer) => (
-                      <option key={customer.id} value={customer.id}>
-                        {customer.site_name}
-                      </option>
-                    ))}
-                  </select>
+                  />
+                  {showCustomerDropdown && filteredCustomers.length > 0 && (
+                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                      {filteredCustomers.map((customer) => (
+                        <div
+                          key={customer.id}
+                          onClick={() => handleCustomerSelect(customer)}
+                          className="px-4 py-2 hover:bg-gray-100 cursor-pointer border-b border-gray-100 last:border-b-0"
+                        >
+                          <div className="font-medium text-gray-900">{customer.site_name}</div>
+                          {customer.contact_person_name && (
+                            <div className="text-sm text-gray-500">{customer.contact_person_name}</div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 {/* Contact Person Name */}
                 <div>
@@ -403,65 +434,6 @@ const ComplaintForm = ({ isEdit, initialData, onClose, onSubmitSuccess, onSubmit
               </div>
             </div>
 
-            {/* Signatures and Resolution Section */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Customer Signature */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  CUSTOMER SIGNATURE
-                </label>
-                <textarea
-                  name="customerSignature"
-                  value={formData.customerSignature}
-                  onChange={handleChange}
-                  className="block w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                  rows="2"
-                  placeholder="Additional notes..."
-                />
-              </div>
-              {/* Technician Remark */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  TECHNICIAN REMARK
-                </label>
-                <textarea
-                  name="technicianRemark"
-                  value={formData.technicianRemark}
-                  onChange={handleChange}
-                  className="block w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                  rows="2"
-                  placeholder="Additional notes..."
-                />
-              </div>
-              {/* Technician Signature */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  TECHNICIAN SIGNATURE
-                </label>
-                <textarea
-                  name="technicianSignature"
-                  value={formData.technicianSignature}
-                  onChange={handleChange}
-                  className="block w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                  rows="2"
-                  placeholder="Additional notes..."
-                />
-              </div>
-              {/* Solution */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  SOLUTION
-                </label>
-                <textarea
-                  name="solution"
-                  value={formData.solution}
-                  onChange={handleChange}
-                  className="block w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                  rows="2"
-                  placeholder="Additional notes..."
-                />
-              </div>
-            </div>
           </div>
 
           {/* Modal Footer */}

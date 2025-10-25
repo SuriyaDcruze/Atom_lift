@@ -535,9 +535,10 @@ const Lifts = () => {
 
       {/* Filters Section */}
       <div className="bg-white p-3 md:p-4 rounded-lg shadow-lg mb-4 md:mb-6">
-        <div className="grid grid-cols-1 xs:grid-cols-2 md:grid-cols-9 gap-2 items-end md:w-[1050px]">
+        {/* Filter Dropdowns */}
+        <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-2 items-end mb-4">
           {/* Door Type */}
-          <div className="md:col-span-1">
+          <div className="col-span-1">
             <select 
               name="doorType" 
               value={filters.doorType} 
@@ -552,7 +553,7 @@ const Lifts = () => {
           </div>
 
           {/* Lift Type */}
-          <div className="md:col-span-1">
+          <div className="col-span-1">
             <select 
               name="liftType" 
               value={filters.liftType} 
@@ -567,7 +568,7 @@ const Lifts = () => {
           </div>
 
           {/* Machine Type */}
-          <div className="md:col-span-1">
+          <div className="col-span-1">
             <select 
               name="machineType" 
               value={filters.machineType} 
@@ -582,7 +583,7 @@ const Lifts = () => {
           </div>
 
           {/* Floor */}
-          <div className="md:col-span-1">
+          <div className="col-span-1">
             <select 
               name="floorID" 
               value={filters.floorID} 
@@ -597,7 +598,7 @@ const Lifts = () => {
           </div>
 
           {/* Brand */}
-          <div className="md:col-span-1">
+          <div className="col-span-1">
             <select 
               name="brand" 
               value={filters.brand} 
@@ -612,7 +613,7 @@ const Lifts = () => {
           </div>
 
           {/* Load */}
-          <div className="md:col-span-1">
+          <div className="col-span-1">
             <select 
               name="load" 
               value={filters.load} 
@@ -627,7 +628,7 @@ const Lifts = () => {
           </div>
 
           {/* Passengers */}
-          <div className="md:col-span-1">
+          <div className="col-span-1">
             <select 
               name="noOfPassengers" 
               value={filters.noOfPassengers} 
@@ -642,7 +643,7 @@ const Lifts = () => {
           </div>
 
           {/* Model */}
-          <div className="md:col-span-1">
+          <div className="col-span-1">
             <select 
               name="model" 
               value={filters.model} 
@@ -655,23 +656,23 @@ const Lifts = () => {
               ))}
             </select>
           </div>
+        </div>
 
-          {/* Filter Actions */}
-          <div className="flex flex-row space-x-2 md:col-span-1">
-            <button
-              onClick={resetFilters}
-              className="flex-1 bg-gray-200 text-gray-700 px-2 md:px-3 py-1 md:py-1.5 rounded-lg hover:bg-gray-300 transition duration-200 text-xs md:text-sm"
-            >
-              Reset
-            </button>
-            <button
-              onClick={() => setCurrentPage(1)}
-              className="flex-1 bg-[#243158] text-white px-2 md:px-3 py-1 md:py-1.5 rounded-lg hover:bg-[#0f131d] transition duration-200 text-xs md:text-sm flex items-center justify-center"
-            >
-              <Search className="w-3 h-3 md:w-4 md:h-4 mr-1" />
-              <span>Search</span>
-            </button>
-          </div>
+        {/* Filter Actions - Reset and Search */}
+        <div className="flex flex-row space-x-2 justify-end">
+          <button
+            onClick={resetFilters}
+            className="bg-gray-200 text-gray-700 px-3 md:px-4 py-1.5 md:py-2 rounded-lg hover:bg-gray-300 transition duration-200 text-sm md:text-base"
+          >
+            Reset
+          </button>
+          <button
+            onClick={() => setCurrentPage(1)}
+            className="bg-[#243158] text-white px-3 md:px-4 py-1.5 md:py-2 rounded-lg hover:bg-[#0f131d] transition duration-200 text-sm md:text-base flex items-center justify-center"
+          >
+            <Search className="w-4 h-4 mr-2" />
+            <span>Search</span>
+          </button>
         </div>
       </div>
 
@@ -900,6 +901,9 @@ const Lifts = () => {
           }}
           onSubmitSuccess={(message) => {
             fetchData(); // Refresh the data
+            setIsCreateModalOpen(false);
+            setIsEditModalOpen(false);
+            setCurrentLift(null);
             toast.success(message || (isEditModalOpen ? 'Lift updated successfully!' : 'Lift created successfully!'), {
               position: "top-right",
               autoClose: 3000,
