@@ -37,16 +37,42 @@ const RecurringInvoices = () => {
       if (!response.data || !Array.isArray(response.data)) {
         throw new Error('Invalid data format received from API');
       }
-      const mappedInvoices = response.data.map(invoice => ({
-        id: invoice.id || '',
-        customerName: invoice.customer_name || 'Unknown',
-        profileName: invoice.profile_name || '',
-        frequency: invoice.frequency_display || invoice.repeat_every || 'Unknown',
-        lastInvoiceDate: invoice.start_date || '',
-        nextInvoiceDate: invoice.next_invoice_date || invoice.start_date || '',
-        status: (invoice.status || 'UNKNOWN').toUpperCase(),
-        amount: `INR ${parseFloat(invoice.amount || 0).toFixed(2)}`,
-      }));
+      const mappedInvoices = response.data.map(invoice => {
+        // Calculate next invoice date based on frequency
+        const calculateNextInvoiceDate = (lastDate, frequency) => {
+          if (!lastDate) return invoice.start_date || '';
+          
+          const date = new Date(lastDate);
+          const frequencyMap = {
+            'week': 7,
+            '2week': 14,
+            'month': 30,
+            '2month': 60,
+            '3month': 90,
+            '6month': 180,
+            'year': 365,
+            '2year': 730
+          };
+          
+          const days = frequencyMap[frequency.toLowerCase()] || 7;
+          date.setDate(date.getDate() + days);
+          return date.toISOString().split('T')[0];
+        };
+        
+        return {
+          id: invoice.id || '',
+          customerName: invoice.customer_name || 'Unknown',
+          profileName: invoice.profile_name || '',
+          frequency: invoice.frequency_display || invoice.repeat_every || 'Unknown',
+          lastInvoiceDate: invoice.last_invoice_date || invoice.start_date || '',
+          nextInvoiceDate: calculateNextInvoiceDate(
+            invoice.last_invoice_date || invoice.start_date, 
+            invoice.repeat_every || 'week'
+          ),
+          status: (invoice.status || 'UNKNOWN').toUpperCase(),
+          amount: `INR ${parseFloat(invoice.amount || 0).toFixed(2)}`,
+        };
+      });
       setRecurringInvoices(mappedInvoices);
       console.log('Mapped Invoices:', mappedInvoices); // Debug log
     } catch (error) {
