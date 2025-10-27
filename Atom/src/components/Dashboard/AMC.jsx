@@ -129,9 +129,11 @@ const AMC = () => {
       
       // Extract unique status values from the API data
       const uniqueStatuses = [...new Set(amcResponse.data.map(item => item.status || item.contract_status).filter(Boolean))];
+      // Filter out 'on_hold' to avoid duplicate with 'On Hold'
+      const filteredStatuses = uniqueStatuses.filter(status => status !== 'on_hold');
       // Always include all status options, even if not present in current data
       const allStatusOptions = ['Active', 'Expired', 'Cancelled', 'On Hold', 'Completed'];
-      const combinedStatuses = [...new Set([...allStatusOptions, ...uniqueStatuses])];
+      const combinedStatuses = [...new Set([...allStatusOptions, ...filteredStatuses])];
       setStatusOptions(combinedStatuses);
 
       // Check for customerId in URL and open AMCForm if present

@@ -133,18 +133,28 @@ const PaymentReceived = () => {
   };
 
   const handlePaymentAdded = (newPayment) => {
-    setPayments((prev) => [...prev, {
-      id: newPayment.id || '',
-      date: newPayment.date || '',
-      paymentNumber: newPayment.payment_number || newPayment.paymentNumber || '',
-      siteName: newPayment.site_name || newPayment.siteName || '',
-      customerName: newPayment.customer_name || newPayment.customerName || 'Unknown',
-      invoiceNumber: newPayment.invoice_reference || newPayment.invoiceNumber || '',
-      mode: newPayment.payment_type || newPayment.mode || '',
-      amount: `INR ${parseFloat(newPayment.amount || 0).toFixed(2)}`,
-      unusedAmount: newPayment.unused_amount ? `INR ${parseFloat(newPayment.unused_amount).toFixed(2)}` : '-'
-    }]);
+    console.log('Payment added response:', newPayment);
+    
+    // Map the response to the expected format
+    const mappedPayment = {
+      id: newPayment.id || newPayment.payment?.id || '',
+      date: newPayment.date || newPayment.payment?.date || '',
+      paymentNumber: newPayment.payment_number || newPayment.payment?.payment_number || newPayment.paymentNumber || '',
+      siteName: newPayment.site_name || newPayment.payment?.site_name || newPayment.siteName || newPayment.payment?.customer?.site_name || '',
+      customerName: newPayment.customer_name || newPayment.payment?.customer_name || newPayment.customerName || newPayment.payment?.customer?.billing_name || 'Unknown',
+      invoiceNumber: newPayment.invoice_reference || newPayment.payment?.invoice_reference || newPayment.invoice?.reference_id || newPayment.invoiceNumber || '',
+      mode: newPayment.payment_type || newPayment.payment?.payment_type || newPayment.mode || '',
+      amount: `INR ${parseFloat(newPayment.amount || newPayment.payment?.amount || 0).toFixed(2)}`,
+      unusedAmount: newPayment.unused_amount || newPayment.payment?.unused_amount ? `INR ${parseFloat(newPayment.unused_amount || newPayment.payment?.unused_amount).toFixed(2)}` : '-'
+    };
+    
+    console.log('Mapped payment:', mappedPayment);
+    
+    setPayments((prev) => [...prev, mappedPayment]);
     setIsFormOpen(false);
+    
+    // Also refresh the payments list from the API
+    fetchPayments();
   };
 
   const formatDate = (dateString) => {

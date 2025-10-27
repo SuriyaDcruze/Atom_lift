@@ -129,11 +129,21 @@ const QuotationForm = ({
         showErrorMessage('Session expired. Please log in again.');
         localStorage.removeItem('access_token');
         window.location.href = '/login';
+      } else if (error.response?.status === 500 && field === 'salesExecutive') {
+        // Silently handle 500 error for sales executive (server issue)
+        console.warn('Sales executive endpoint returned 500, skipping...');
+        setExistingOptions((prev) => ({
+          ...prev,
+          [field]: [], // Set empty array for sales executive
+        }));
       } else if (retryCount > 0) {
         console.log(`Retrying fetchOptions for ${field}... (${retryCount} attempts left)`);
         setTimeout(() => fetchOptions(field, retryCount - 1), 2000);
       } else {
-        showErrorMessage(`Failed to fetch ${field.replace(/([A-Z])/g, ' $1').toLowerCase().trim()}: ${error.message}`);
+        // Only show error message for non-500 errors
+        if (error.response?.status !== 500) {
+          showErrorMessage(`Failed to fetch ${field.replace(/([A-Z])/g, ' $1').toLowerCase().trim()}: ${error.message}`);
+        }
       }
     }
   };
@@ -220,19 +230,29 @@ const QuotationForm = ({
     if (!axiosInstance) return;
 
     try {
-      const [customers, amcTypes, lifts, employees] = await Promise.all([
+      // Fetch customers, amcTypes, and lifts with Promise.all
+      const [customers, amcTypes, lifts] = await Promise.all([
         axiosInstance.get(`${apiBaseUrl}/sales/customer-list/`),
         axiosInstance.get(`${apiBaseUrl}/amc/amc-types/`),
         axiosInstance.get(`${apiBaseUrl}/auth/lift_list/`),
-        axiosInstance.get(`${apiBaseUrl}/auth/employees/`), // Fetch employees for submission
       ]);
+
+      // Fetch employees separately with error handling
+      let employeesData = { data: [] };
+      try {
+        const employeesResponse = await axiosInstance.get(`${apiBaseUrl}/auth/employees/`);
+        employeesData = employeesResponse;
+      } catch (employeeError) {
+        console.warn('Failed to fetch employees, continuing without sales executive:', employeeError);
+        // Continue without employees data
+      }
 
       const quotationData = {
         reference_id: formData.referenceId,
         customer: customers.data.find(c => c.site_name === formData.customer)?.id || formData.customer,
         type: formData.type,
         amc_type: amcTypes.data.find(a => a.type === formData.amcType)?.id || null,
-        sales_executive: employees.data.find(e => e.name === formData.salesExecutive)?.id || null, // Map name to ID
+        sales_executive: employeesData.data?.find(e => e.name === formData.salesExecutive)?.id || formData.salesExecutive || null,
         year_of_make: formData.yearOfMake || null,
         date: formData.date,
         remark: formData.remark || null,

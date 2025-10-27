@@ -138,18 +138,30 @@ const PaymentReceivedForm = ({ isOpen, onClose, onPaymentAdded }) => {
       };
       console.log('Sending payload:', payload); // Debug payload
 
+      console.log('Sending request to:', `${import.meta.env.VITE_BASE_API}/sales/add-payment-received/`);
       const response = await axiosInstance.post(`${import.meta.env.VITE_BASE_API}/sales/add-payment-received/`, payload);
+      console.log('Response received:', response);
 
-      if (!response.data || !response.data.id) {
-        throw new Error(response.data?.error || 'Failed to add payment');
+      if (!response.data) {
+        console.error('No data in response:', response);
+        throw new Error('No data received from server');
       }
+      
+      console.log('Response data:', response.data);
 
       const result = response.data;
+      console.log('Payment added successfully, response:', result);
+      
+      showSuccessMessage('Payment added successfully!');
+      
       if (typeof onPaymentAdded === 'function') {
+        // Pass the full response to handlePaymentAdded for proper mapping
         onPaymentAdded(result);
       } else {
         console.warn('onPaymentAdded is not a function. Please ensure it is passed correctly.');
       }
+      
+      // Refresh will happen in handlePaymentAdded
       onClose();
       setFormData({
         date: '',
@@ -162,8 +174,22 @@ const PaymentReceivedForm = ({ isOpen, onClose, onPaymentAdded }) => {
         unusedAmount: ''
       });
     } catch (err) {
-      showErrorMessage(err.message || 'Failed to submit payment');
-      console.error('Submission error:', err.response?.data);
+      console.error('Full error object:', err);
+      console.error('Error response:', err.response?.data);
+      console.error('Error status:', err.response?.status);
+      
+      let errorMessage = 'Failed to submit payment';
+      if (err.response?.data?.error) {
+        errorMessage = err.response.data.error;
+      } else if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      } else if (err.message) {
+        errorMessage = err.message;
+      } else if (err.response?.data) {
+        errorMessage = JSON.stringify(err.response.data);
+      }
+      
+      showErrorMessage(errorMessage);
     } finally {
       setIsSubmitting(false);
     }

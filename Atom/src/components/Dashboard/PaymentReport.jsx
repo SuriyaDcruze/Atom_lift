@@ -1,30 +1,65 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Search, Printer, Copy, FileText, 
   File, MoreVertical, Calendar 
 } from 'lucide-react';
+import axios from 'axios';
 
 const PaymentReport = () => {
   const primaryColor = '#243158';
   const [showExportMenu, setShowExportMenu] = useState(false);
+  const [payments, setPayments] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [customers, setCustomers] = useState([]);
 
-  // Sample payment data
-  const payments = [
-    {
-      sno: '1',
-      receiptNo: 'RCPT-2025-001',
-      paymentDate: '15.07.2025',
-      ltmaNo: 'LTMA-001',
-      siteName: 'T-Nagar Complex',
-      mobileNo: '9876543210',
-      quotationNo: 'QUO-2025-001',
-      amcOrderNo: 'AMC-ORD-001',
-      paymentType: 'Cheque',
-      chequeNo: 'CHQ-001',
-      chequeDate: '10.07.2025'
-    },
-    // Add more payments as needed
-  ];
+  const createAxiosInstance = () => {
+    const token = localStorage.getItem('access_token');
+    if (!token) {
+      console.error('Authentication token not found');
+      return null;
+    }
+    return axios.create({
+      headers: { Authorization: `Bearer ${token}` },
+    });
+  };
+
+  // Fetch payments from API
+  useEffect(() => {
+    const fetchPayments = async () => {
+      setLoading(true);
+      const axiosInstance = createAxiosInstance();
+      if (!axiosInstance) return;
+
+      try {
+        const response = await axiosInstance.get(`${import.meta.env.VITE_BASE_API}/sales/payment-received-list/`);
+        console.log('Payment report data:', response.data);
+        
+        if (response.data && Array.isArray(response.data)) {
+          // Map the API data to the report format
+          const mappedPayments = response.data.map((payment, index) => ({
+            sno: (index + 1).toString(),
+            receiptNo: payment.payment_number || payment.id?.toString() || '',
+            paymentDate: payment.date ? new Date(payment.date).toLocaleDateString('en-GB') : '',
+            ltmaNo: payment.invoice?.ltma_number || '-',
+            siteName: payment.site_name || payment.customer?.site_name || '-',
+            mobileNo: payment.customer?.mobile || payment.customer_mobile || '-',
+            quotationNo: payment.quotation?.reference_id || '-',
+            amcOrderNo: payment.amc?.reference_id || '-',
+            paymentType: payment.payment_type === 'cash' ? 'Cash' : payment.payment_type === 'bank_transfer' ? 'Bank Transfer' : 'Cheque',
+            chequeNo: payment.cheque_number || '-',
+            chequeDate: payment.cheque_date ? new Date(payment.cheque_date).toLocaleDateString('en-GB') : '-'
+          }));
+          setPayments(mappedPayments);
+        }
+      } catch (error) {
+        console.error('Error fetching payment reports:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPayments();
+  }, []);
 
   const months = [
     'January', 'February', 'March', 'April', 
@@ -274,6 +309,11 @@ const PaymentReport = () => {
 
         {/* Payment Table with Horizontal Scroll */}
         <div className="bg-white rounded-lg shadow overflow-hidden">
+          {loading ? (
+            <div className="p-8 text-center text-gray-500">
+              Loading payment reports...
+            </div>
+          ) : (
           <div className="overflow-x-auto">
             <div className="min-w-[1400px]">
               {/* Table Header */}
@@ -294,7 +334,7 @@ const PaymentReport = () => {
               {/* Table Rows */}
               {payments.length > 0 ? (
                 payments.map((payment, index) => (
-                  <div key={index} className="grid grid-cols-11 p-3 border-b border-gray-200 text-sm items-center">
+                    <div key={index} className="grid grid-cols-11 p-3 border-b border-gray-200 text-sm items-center hover:bg-gray-50">
                     <div className="px-2">{payment.sno}</div>
                     <div className="px-2 font-medium">{payment.receiptNo}</div>
                     <div className="px-2">{payment.paymentDate}</div>
@@ -322,6 +362,7 @@ const PaymentReport = () => {
               )}
             </div>
           </div>
+          )}
 
           {/* Pagination */}
           <div className="p-3 text-sm text-gray-600 border-t border-gray-200">

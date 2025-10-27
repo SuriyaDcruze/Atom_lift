@@ -357,9 +357,9 @@ const ComplaintsReport = () => {
         </div>
 
         {/* Complaints Table/Cards */}
-        <div className="bg-white rounded-lg shadow overflow-hidden">
+        <div className="bg-white rounded-lg shadow overflow-x-auto">
           {/* Desktop Table Header - Hidden on mobile */}
-          <div className="hidden lg:grid grid-cols-12 bg-gray-100 p-3 font-medium text-gray-700 text-sm border-b border-gray-200">
+          <div className="hidden lg:grid grid-cols-[100px_80px_80px_80px_120px_80px_200px_120px_100px_80px_60px_60px] bg-gray-100 p-3 font-medium text-gray-700 text-sm border-b border-gray-200">
             <div className="px-2">COMPLAINT NO</div>
             <div className="px-2">DATE</div>
             <div className="px-2">AMC ID</div>
@@ -383,25 +383,25 @@ const ComplaintsReport = () => {
             currentComplaints.map((complaint, index) => (
               <div key={index}>
                 {/* Desktop Table Row */}
-                <div className="hidden lg:grid grid-cols-12 p-3 border-b border-gray-200 text-sm items-center">
-                <div className="px-2 font-medium">{complaint.complaintNo}</div>
-                <div className="px-2">{complaint.date}</div>
-                <div className="px-2">{complaint.amcId}</div>
-                <div className="px-2">{complaint.siteId}</div>
-                <div className="px-2">{complaint.customer}</div>
+                <div className="hidden lg:grid grid-cols-[100px_80px_80px_80px_120px_80px_200px_120px_100px_80px_60px_60px] p-3 border-b border-gray-200 text-sm">
+                <div className="px-2 font-medium break-words">{complaint.complaintNo}</div>
+                <div className="px-2 break-words">{complaint.date}</div>
+                <div className="px-2 break-words">{complaint.amcId}</div>
+                <div className="px-2 break-words">{complaint.siteId}</div>
+                <div className="px-2 break-words">{complaint.customer}</div>
                 <div className="px-2">
-                  <span className={`px-2 py-1 rounded-full text-xs ${
+                  <span className={`px-2 py-1 rounded-full text-xs whitespace-nowrap ${
                     complaint.type === 'Electrical' ? 'bg-blue-100 text-blue-800' : 
                     'bg-gray-100 text-gray-800'
                   }`}>
                     {complaint.type}
                   </span>
                 </div>
-                <div className="px-2">{complaint.problem}</div>
-                <div className="px-2">{complaint.resolution}</div>
-                <div className="px-2">{complaint.doneBy}</div>
-                <div className="px-2">
-                  <span className={`px-2 py-1 rounded-full text-xs ${
+                <div className="px-2 break-words">{complaint.problem}</div>
+                <div className="px-2 break-words">{complaint.resolution}</div>
+                <div className="px-2 break-words">{complaint.doneBy}</div>
+                <div className="px-2 flex items-center">
+                  <span className={`px-2 py-1 rounded-full text-xs whitespace-nowrap ${
                     complaint.status === 'Closed' ? 'bg-green-100 text-green-800' : 
                     complaint.status === 'In Progress' ? 'bg-purple-100 text-purple-800' :
                     complaint.status === 'Open' ? 'bg-yellow-100 text-yellow-800' :
@@ -410,14 +410,14 @@ const ComplaintsReport = () => {
                     {complaint.status}
                   </span>
                 </div>
-                <div className="px-2">
+                <div className="px-2 flex items-center justify-center">
                   {complaint.status !== 'Closed' && (
                     <button className="p-1 text-green-600 hover:bg-green-50 rounded">
                       <Check className="h-4 w-4" />
                     </button>
                   )}
                 </div>
-                <div className="px-2">
+                <div className="px-2 flex items-center justify-center">
                   <button 
                     className="p-1 text-blue-600 hover:bg-blue-50 rounded"
                     onClick={() => handlePrintComplaint(complaint.id)}

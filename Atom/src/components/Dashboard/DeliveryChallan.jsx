@@ -91,6 +91,22 @@ const DeliveryChallanRow = ({
 
 const DeliveryChallan = () => {
   const [showForm, setShowForm] = useState(false);
+  const [customers, setCustomers] = useState(() => {
+    // Load from localStorage if available
+    const saved = localStorage.getItem('delivery_challans');
+    return saved ? JSON.parse(saved) : [
+      {
+        date: '27.11.2024',
+        deliveryChallanNumber: 'DC-2',
+        reference: 'TEST-0001 AL0000',
+        customerName: '-',
+        status: 'Drafts',
+        invoiceStatus: 'Not Invoiced',
+        amount: 'INR 0.00',
+      },
+    ];
+  });
+  
   const [formData, setFormData] = useState({
     date: new Date().toISOString().split('T')[0],
     deliveryChallanNumber: '',
@@ -103,18 +119,6 @@ const DeliveryChallan = () => {
     notes: ''
   });
 
-  const customers = [
-    {
-      date: '27.11.2024',
-      deliveryChallanNumber: 'DC-2',
-      reference: 'TEST-0001 AL0000',
-      customerName: '-',
-      status: 'Drafts',
-      invoiceStatus: 'Not Invoiced',
-      amount: 'INR 0.00',
-    },
-  ];
-
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({
@@ -126,7 +130,32 @@ const DeliveryChallan = () => {
   const handleSubmit = (e) => {
     e.preventDefault();
     console.log('Delivery Challan Form Submitted:', formData);
-    // TODO: Add API call to save delivery challan
+    
+    // Format date for display
+    const formattedDate = new Date(formData.date).toLocaleDateString('en-GB', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
+    
+    // Create new challan entry
+    const newChallan = {
+      date: formattedDate,
+      deliveryChallanNumber: formData.deliveryChallanNumber,
+      reference: formData.reference,
+      customerName: formData.customerName,
+      status: formData.status,
+      invoiceStatus: formData.invoiceStatus,
+      amount: `INR ${parseFloat(formData.amount || 0).toFixed(2)}`
+    };
+    
+    // Add to customers list
+    const updatedCustomers = [...customers, newChallan];
+    setCustomers(updatedCustomers);
+    
+    // Save to localStorage
+    localStorage.setItem('delivery_challans', JSON.stringify(updatedCustomers));
+    
     alert('Delivery Challan created successfully!');
     setShowForm(false);
     setFormData({

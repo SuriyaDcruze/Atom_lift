@@ -49,7 +49,6 @@ const Sidebar = ({ isCollapsed, toggleSidebar, isMobile }) => {
         { name: 'Customers', icon: <Users className="h-4 w-4" />, path: '/dashboard/customers', key: 'customers' },
         { name: 'Delivery Challan', icon: <ShoppingCart className="h-4 w-4" />, path: '/dashboard/delivery-challan', key: 'delivery-challan' },
         { name: 'Quotation', icon: <ClipboardList className="h-4 w-4" />, path: '/dashboard/quotation', key: 'quotation' },
-        { name: 'Orders', icon: <ClipboardList className="h-4 w-4" />, path: '/dashboard/orders', key: 'orders' },
         { name: 'Invoice', icon: <ClipboardList className="h-4 w-4" />, path: '/dashboard/invoice', key: 'invoice' },
         { name: 'Payment Received', icon: <CreditCard className="h-4 w-4" />, path: '/dashboard/payment-received', key: 'paymentReceived' },
         { name: 'Recurring Invoices', icon: <Repeat className="h-4 w-4" />, path: '/dashboard/recurring-invoices', key: 'recurringInvoices' },
@@ -94,7 +93,7 @@ const Sidebar = ({ isCollapsed, toggleSidebar, isMobile }) => {
       key: 'reports',
       subItems: [
         { name: 'Complaint', path: '/dashboard/complaint-report', key: 'report-complaint' },
-        { name: 'Life Wise Complaint', path: '/dashboard/life-wise-complaint', key: 'report-life-wise-complaint' },
+        { name: 'Lift Wise Complaint', path: '/dashboard/life-wise-complaint', key: 'report-life-wise-complaint' },
         { name: 'AMC', path: '/dashboard/amc-report', key: 'report-amc' },
         { name: 'Routine Services', path: '/dashboard/routine-services-report', key: 'report-routine-services' },
         { name: 'AMC Next Payment Due', path: '/dashboard/amc-next-payment-due-report', key: 'report-amc-next-payment-due' },

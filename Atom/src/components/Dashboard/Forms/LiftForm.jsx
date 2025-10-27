@@ -261,7 +261,8 @@ const LiftForm = ({
 
       fetchOptions(field);
       closeAddModal(field);
-      onSubmitSuccess();
+      // Don't call onSubmitSuccess() here - it closes the main form
+      // onSubmitSuccess() should only be called when submitting the entire lift form
     } catch (error) {
       console.error(`Error ${isEditing ? 'editing' : 'adding'} ${field}:`, error);
       if (error.response?.status === 401) {

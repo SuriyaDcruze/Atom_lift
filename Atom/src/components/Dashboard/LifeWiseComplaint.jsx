@@ -4,7 +4,7 @@ import {
   FileText, File, MoreVertical, Calendar
 } from 'lucide-react';
 
-const LifeWiseComplaint = () => {
+const LiftWiseComplaint = () => {
   const primaryColor = '#243158';
   const [showExportMenu, setShowExportMenu] = useState(false);
 
@@ -59,7 +59,7 @@ const LifeWiseComplaint = () => {
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
-          <h1 className="text-2xl font-bold text-gray-800">Life Wise Complaints Report</h1>
+          <h1 className="text-2xl font-bold text-gray-800">Lift Wise Complaints Report</h1>
           <div className="mt-4 md:mt-0 flex gap-2">
             {/* Export Menu */}
             <div className="relative">
@@ -307,4 +307,4 @@ const LifeWiseComplaint = () => {
   );
 };
 
-export default LifeWiseComplaint;
+export default LiftWiseComplaint;

@@ -50,7 +50,7 @@ import RoutineServieSchedule from './components/Dashboard/RoutineServieSchedule'
 import StockRegister from './components/Dashboard/StockRegister';
 import MaterialRequest from './components/Dashboard/MaterialRequest';
 import ComplaintReport from './components/Dashboard/ComplaintReport';
-import LifeWiseComplaint from './components/Dashboard/LifeWiseComplaint';
+import LiftWiseComplaint from './components/Dashboard/LifeWiseComplaint';
 import AMCreport from './components/Dashboard/AMCreport';
 import RoutineServiceReport from './components/Dashboard/RoutineServiceReport';
 import AMCnextPaymentDueReport from './components/Dashboard/AMCnextPaymentDueReport'; 
@@ -134,7 +134,7 @@ function App() {
           <Route path="/dashboard/stock-register" element={<StockRegister />} />
           <Route path="/dashboard/material-request" element={<MaterialRequest />} />
           <Route path="/dashboard/complaint-report" element={<ComplaintReport />} />
-          <Route path="/dashboard/life-wise-complaint" element={<LifeWiseComplaint />} />
+          <Route path="/dashboard/life-wise-complaint" element={<LiftWiseComplaint />} />
           <Route path="/dashboard/amc-report" element={<AMCreport />} />
           <Route path="/dashboard/routine-services-report" element={<RoutineServiceReport />} />
           <Route path="/dashboard/amc-next-payment-due-report" element={<AMCnextPaymentDueReport />} />

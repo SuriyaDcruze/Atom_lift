@@ -75,16 +75,27 @@ const CustomerDetails = () => {
       console.log('Fetching lifts for customerId:', customerId);
       // Fetch all lifts and filter by customer
       const response = await axiosInstance.get(`${apiBaseUrl}/auth/lift_list/`);
-      console.log('All lifts:', response.data);
+      console.log('All lifts response:', response.data);
+      console.log('Total lifts fetched:', response.data?.length);
       
       // Try multiple comparison methods to find customer lifts
+      console.log('Sample lift data:', response.data[0]);
+      console.log('Lift customer field types:', response.data.map(l => ({ customer: l.customer, customer_id: l.customer_id, customer_object: l.customer_object })));
+      
       const customerLifts = response.data.filter(lift => {
-        const liftCustomer = lift.customer;
+        const liftCustomer = lift.customer || lift.customer_id;
+        const customerIdStr = customerId.toString();
+        const customerIdNum = parseInt(customerId);
+        
+        console.log(`Comparing lift customer: "${liftCustomer}" (type: ${typeof liftCustomer}) with customerId: "${customerId}" (type: ${typeof customerId})`);
+        
         const matches = (
           liftCustomer == customerId || 
-          liftCustomer === parseInt(customerId) ||
-          liftCustomer === customerId.toString() ||
-          liftCustomer === String(customerId)
+          liftCustomer === customerIdNum ||
+          liftCustomer === customerIdStr ||
+          liftCustomer === String(customerId) ||
+          liftCustomer == customerIdStr ||
+          liftCustomer == customerIdNum
         );
         
         if (matches) {
@@ -95,6 +106,9 @@ const CustomerDetails = () => {
       });
       
       console.log('Filtered customer lifts:', customerLifts);
+      console.log('Number of lifts for this customer:', customerLifts.length);
+      console.log('Sample lift data structure:', customerLifts[0]);
+      
       setLifts(customerLifts);
     } catch (error) {
       console.error('Error fetching customer lifts:', error);
@@ -395,7 +409,7 @@ const CustomerDetails = () => {
           onClick={handleComplaint}
           className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
         >
-          COMPLAINT OR CODE
+          COMPLAINT QR CODE
         </button>
       </div>
 
@@ -666,35 +680,40 @@ const CustomerDetails = () => {
           </div>
           
           {lifts.length > 0 ? (
-            <div className="space-y-3">
-              {lifts.map((lift, index) => (
-                <div key={lift.id || index} className="border border-gray-200 rounded-lg p-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <span className="text-sm font-medium text-gray-600">Lift ID:</span>
-                      <p className="text-gray-800">{lift.lift_id || lift.lift_code || 'N/A'}</p>
-                    </div>
-                    <div>
-                      <span className="text-sm font-medium text-gray-600">Model:</span>
-                      <p className="text-gray-800">{lift.model || 'N/A'}</p>
-                    </div>
-                    <div>
-                      <span className="text-sm font-medium text-gray-600">Capacity:</span>
-                      <p className="text-gray-800">{lift.no_of_passengers || lift.capacity || 'N/A'}</p>
-                    </div>
-                    <div>
-                      <span className="text-sm font-medium text-gray-600">Brand:</span>
-                      <p className="text-gray-800">{lift.brand_name || lift.brand || 'N/A'}</p>
-                    </div>
-                  </div>
-                </div>
-              ))}
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-sm">
+                <thead>
+                  <tr className="bg-gray-100 text-gray-700">
+                    <th className="text-left p-3">Lift No</th>
+                    <th className="text-left p-3">Machine Type</th>
+                    <th className="text-left p-3">No. of Passengers</th>
+                    <th className="text-left p-3">No. of Floors</th>
+                    <th className="text-left p-3">Lift Capacity</th>
+                    <th className="text-left p-3">Lift Speed</th>
+                    <th className="text-left p-3">DL Type</th>
+                    <th className="text-left p-3">DL Qty</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {lifts.map((lift, index) => (
+                    <tr key={lift.id || index} className="border-t hover:bg-gray-50">
+                      <td className="p-3">{lift.lift_code || lift.lift_id || lift.lift_no || '—'}</td>
+                      <td className="p-3">{lift.machine_type || lift.machineType || '—'}</td>
+                      <td className="p-3">{lift.no_of_passengers || lift.capacity || '—'}</td>
+                      <td className="p-3">{lift.no_of_floors || lift.floors || '—'}</td>
+                      <td className="p-3">{lift.lift_capacity || lift.capacity || '—'}</td>
+                      <td className="p-3">{lift.lift_speed || lift.speed || '—'}</td>
+                      <td className="p-3">{lift.door_type || lift.dl_type || '—'}</td>
+                      <td className="p-3">{lift.door_qty || lift.dl_qty || '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           ) : (
             <div className="text-center py-8">
               <p className="text-gray-500 text-lg">No Lifts</p>
               <p className="text-gray-400 text-sm mt-2">Click "ADD LIFTS" to add lifts for this customer</p>
-              <p className="text-gray-400 text-xs mt-1">Debug: lifts.length = {lifts.length}</p>
             </div>
           )}
         </div>
@@ -1214,12 +1233,18 @@ const CustomerDetails = () => {
         <LiftForm
           isEdit={false}
           initialData={{ customer: customerId }}
-          onClose={() => setIsLiftFormOpen(false)}
+          onClose={() => {
+            console.log('LiftForm onClose called');
+            setIsLiftFormOpen(false);
+          }}
           onSubmitSuccess={() => {
             console.log('LiftForm onSubmitSuccess called for customerId:', customerId);
-            fetchCustomerLifts(); // Refresh lifts data
-            setIsLiftFormOpen(false);
-            toast(<SuccessToast message="Lift added successfully!" />, { autoClose: 3000 });
+            // Small delay to ensure API response is processed
+            setTimeout(() => {
+              fetchCustomerLifts(); // Refresh lifts data
+              setIsLiftFormOpen(false);
+              toast(<SuccessToast message="Lift added successfully!" />, { autoClose: 3000 });
+            }, 500);
           }}
           apiBaseUrl={apiBaseUrl}
           dropdownOptions={{}}
